@@ -1,5 +1,4 @@
 [
-        // --- STACJONARNE ---
         { category: "stacjonarne", section: "---- TELEFONY ----", label: "6863i", value: "6863i 80C00001AAA-A", color: "#0dcaf0" },
         { category: "stacjonarne", section: "---- TELEFONY ----", label: "6865i", value: "6865i 80C00001AAA-A", color: "#0dcaf0" },
         { category: "stacjonarne", section: "---- TELEFONY ----", label: "6867i", value: "6867i 80C00002AAA-A", color: "#0dcaf0" },
@@ -26,7 +25,6 @@
         { category: "stacjonarne", section: "---- BER ----", label: "DHCP", value: "Nie laczy sie z serwerem", color: "#dc3545" },
         { category: "stacjonarne", section: "---- BER ----", label: "Płyta główna", value: "Uszkodzona plyta glowna", color: "#dc3545" },
 
-        // --- KOMÓRKOWE (Przykładowa baza startowa, możesz ją dowolnie edytować!) ---
         { category: "komorkowe", section: "---- USTERKI----", label: "Odnowienie kompletu", value: "Odnowienie kompletu", color: "#ffc107" },
         { category: "komorkowe", section: "---- USTERKI----", label: "Usunięto nieprawidłowości", value: "Usunieto nieprawidlowosci", color: "#ffc107" },
         { category: "komorkowe", section: "---- Lutowanie----", label: "Złącze HF", value: "Wymiana zlacza HF", color: "#198754" },
