@@ -38,5 +38,6 @@
   { "category": "komorkowe", "section": "---- BER ----", "label": "Dioda cały czas świeci", "value": "Dioda caly czas swieci", "color": "#dc3545" },
   { "category": "komorkowe", "section": "---- BER ----", "label": "Nie działa subskrypcja", "value": "nie dziala subskrypcja", "color": "#dc3545" },
   { "category": "komorkowe", "section": "---- BER ----", "label": "Nie działają przyciski", "value": "Nie dzialaja przyciski", "color": "#dc3545" },
-  { "category": "komorkowe", "section": "---- BER ----", "label": "Biały Wyświetlacz", "value": "Bialy wyswietlacz", "color": "#dc3545" }
+  { "category": "komorkowe", "section": "---- BER ----", "label": "Biały Wyświetlacz", "value": "Bialy wyswietlacz", "color": "#dc3545" },
+  { "category": "komorkowe", "section": "---- BER ----", "label": "Płyta główna", "value": "Uszkodzona plyta glowna", "color": "#dc3545" }
 ]
