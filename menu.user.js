@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
-// @version      22.0
+// @version      22.1
 // @description  Wersja z możliwością wyboru generowania kodu QR lub kodu kreskowego (Barcode). Podział na zakładki i sekcje. Centralna baza GitHub. Możliwość ukrywania wybranych kodów.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
