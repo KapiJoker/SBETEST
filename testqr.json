@@ -18,7 +18,7 @@
   { "category": "stacjonarne", "section": "---- BER ----", "label": "Ślady korozji na płycie", "value": "Slady korozji na plycie", "color": "#dc3545" },
   { "category": "stacjonarne", "section": "---- BER ----", "label": "Nie działają przyciski", "value": "Nie dzialaja przyciski", "color": "#dc3545" },
   { "category": "stacjonarne", "section": "---- BER ----", "label": "Dioda cały czas świeci", "value": "Dioda caly czas swieci", "color": "#dc3545" },
-  { "category": "stacjonarne", "section": "---- BER ----", "label": "Urwany Port Rj-45", "value": "Urwany Port Rj-45", "color": "#dc3545" },,
+  { "category": "stacjonarne", "section": "---- BER ----", "label": "Urwany Port Rj-45", "value": "Urwany Port Rj-45", "color": "#dc3545" },
   { "category": "stacjonarne", "section": "---- BER ----", "label": "Biały Wyświetlacz", "value": "Bialy wyswietlacz", "color": "#dc3545" },
   { "category": "stacjonarne", "section": "---- BER ----", "label": "DHCP", "value": "Nie laczy sie z serwerem", "color": "#dc3545" },
   { "category": "stacjonarne", "section": "---- BER ----", "label": "Płyta główna", "value": "Uszkodzona plyta glowna", "color": "#dc3545" },
