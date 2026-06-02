@@ -192,19 +192,7 @@
         showQR('brak');
     };
     titleGroup.appendChild(brakBtn);
-
-    const modeToggleBtn = document.createElement('button');
-    modeToggleBtn.innerText = codeMode === 'qr' ? '🔲 QR' : '📊 Paski';
-    modeToggleBtn.style.cssText = "padding:1px 5px; font-size:9px; font-weight:bold; cursor:pointer; border-radius:3px; border:none; background:#0d6efd; color:#fff; line-height:1.1;";
-    modeToggleBtn.onclick = (e) => {
-        e.stopPropagation();
-        codeMode = codeMode === 'qr' ? 'barcode' : 'qr';
-        localStorage.setItem('qrCodeMode', codeMode);
-        modeToggleBtn.innerText = codeMode === 'qr' ? '🔲 QR' : '📊 Paski';
-        if (savedQRValue) showQR(savedQRValue);
-    };
-    titleGroup.appendChild(modeToggleBtn);
-
+    
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
