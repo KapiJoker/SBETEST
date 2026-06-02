@@ -10,10 +10,8 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
 // @require      https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js
 //
-// === TE DWIE LINIJKI WŁĄCZAJĄ AUTOMATYCZNE AKTUALIZACJE ===
 // @updateURL    https://raw.githubusercontent.com/KapiJoker/SBETEST/main/menu.user.js
 // @downloadURL  https://raw.githubusercontent.com/KapiJoker/SBETEST/main/menu.user.js
-// ==========================================================
 // ==/UserScript==
 
 (function() {
@@ -28,13 +26,13 @@
     let customItems = JSON.parse(localStorage.getItem('qrCustomItems')) || defaultDatabase;
     let recentItems = JSON.parse(localStorage.getItem('qrRecentItems')) || [];
     let collapsedSections = JSON.parse(localStorage.getItem('qrCollapsedSections')) || {};
-    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; // Lista wartości (values) ukrytych kodów
+    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; 
     let menuPosition = JSON.parse(localStorage.getItem('qrMenuPosition')) || { bottom: '20px', left: '20px', top: 'auto', right: 'auto' };
     let menuSize = JSON.parse(localStorage.getItem('qrMenuSize')) || { width: '240px', height: 'auto' };
     let themeMode = localStorage.getItem('qrThemeMode') || 'dark';
     let isCompactMode = localStorage.getItem('qrCompactMode') === 'true';
     let currentTab = localStorage.getItem('qrCurrentTab') || 'stacjonarne';
-    let codeMode = localStorage.getItem('qrCodeMode') || 'qr';
+    let codeMode = localStorage.getItem('qrCodeMode') || 'qr'; 
     let selectedSearchIndex = -1;
 
     function fetchExternalDatabase() {
@@ -75,7 +73,6 @@
 
     function getMergedSections() {
         const sectionsMap = {};
-        // Filtrujemy tylko te elementy, które należą do obecnej zakładki i NIE są ukryte przez użytkownika
         const filteredItems = customItems.filter(item => (item.category || 'stacjonarne') === currentTab && !hiddenItems.includes(item.value));
 
         filteredItems.forEach((cItem) => {
@@ -161,7 +158,7 @@
             if (rect.left > window.innerWidth / 2) { floatingQR.style.left = (rect.left - 290) + 'px'; }
             else { floatingQR.style.left = (rect.right + 10) + 'px'; }
         }
-
+        
         floatingQR.style.top = rect.top + 'px';
         floatingQR.style.backgroundColor = themeMode === 'dark' ? '#2b3035' : '#f8f9fa';
         floatingQR.style.border = themeMode === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.15)';
@@ -351,7 +348,6 @@
     function showQR(value) {
         if (!value) return;
 
-        // Jeśli aktywny kod został właśnie ukryty przez użytkownika, schowaj pływające okienko
         if (hiddenItems.includes(value)) {
             if (typeof floatingQR !== 'undefined') floatingQR.style.display = 'none';
             savedQRValue = '';
@@ -371,7 +367,7 @@
             } else {
                 const svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 floatingQRWrapper.appendChild(svgNode);
-
+                
                 let barWidth = 1.6;
                 if (value.length > 15) barWidth = 1.1;
                 else if (value.length > 10) barWidth = 1.3;
@@ -379,18 +375,18 @@
                 JsBarcode(svgNode, value, {
                     format: "CODE128",
                     width: barWidth,
-                    height: 55,
+                    height: 55,         
                     displayValue: true,
                     fontSize: 11,
-                    margin: 12,
+                    margin: 12,         
                     background: "#ffffff",
                     lineColor: "#000000"
                 });
             }
             floatingQR.style.display = 'flex';
             updateFloatingQRPosition();
-        } catch(e) {
-            console.error("Błąd generowania kodu:", e);
+        } catch(e) { 
+            console.error("Błąd generowania kodu:", e); 
             floatingQRWrapper.innerText = "Błąd formatu danych";
         }
 
@@ -479,7 +475,6 @@
             manageBtn.style.display = 'block';
             resizer.style.display = 'flex';
 
-            // Ostatnie kody również filtrujemy z ukrytych
             const filteredRecent = recentItems.filter(item => (item.category || 'stacjonarne') === currentTab && !hiddenItems.includes(item.value));
             if (filteredRecent.length > 0) {
                 const recentWrapper = document.createElement('div');
@@ -629,7 +624,6 @@
         };
         cardRec.appendChild(saveBtn); gridForms.appendChild(cardRec);
 
-        // Nagłówek dla listy zarządzania widocznością/usuwaniem
         const listHeader = document.createElement('div');
         listHeader.innerText = "📋 Wszystkie kody (Pokaż / Ukryj / Usuń):";
         listHeader.style.cssText = "font-size:12px; font-weight:600; margin-bottom:6px; color:#6c757d;";
@@ -641,18 +635,17 @@
 
         customItems.forEach((item, index) => {
             if(item.value === "PLACEHOLDER_EMPTY") return;
-
+            
             const isHidden = hiddenItems.includes(item.value);
-
+            
             const itemRow = document.createElement('div'); itemRow.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:6px; border-bottom:1px solid rgba(128,128,128,0.1); font-size:11px;";
             if (isHidden) itemRow.style.opacity = '0.4';
 
             itemRow.innerHTML = `<div>${item.category === 'komorkowe' ? '📱' : '🖥️'} <span style="background:${item.color || '#6c757d'}; color:#fff; padding:1px 4px; border-radius:3px;">${item.section}</span> <b>${item.label}</b></div>`;
-
+            
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = "display:flex; gap:12px; align-items:center;";
 
-            // Przycisk Pokaż/Ukryj (Oko)
             const hideBtn = document.createElement('button');
             hideBtn.innerText = isHidden ? '🙈' : '👁️';
             hideBtn.title = isHidden ? "Pokaż w menu" : "Ukryj z menu";
@@ -668,13 +661,12 @@
                 renderModalContent();
             };
 
-            // Przycisk Usuń (Krzyżyk)
             const delBtn = document.createElement('button'); delBtn.innerText = '❌'; delBtn.style.cssText = "background:none; border:none; cursor:pointer;";
             delBtn.onclick = () => { if (confirm("Usunąć?")) { customItems.splice(index, 1); localStorage.setItem('qrCustomItems', JSON.stringify(customItems)); renderList(); renderModalContent(); } };
-
+            
             btnContainer.appendChild(hideBtn);
             btnContainer.appendChild(delBtn);
-            itemRow.appendChild(btnContainer);
+            itemRow.appendChild(btnContainer); 
             itemsScrollContainer.appendChild(itemRow);
         });
 
