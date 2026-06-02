@@ -9,6 +9,11 @@
 // @connect      raw.githubusercontent.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
 // @require      https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js
+//
+// === TE DWIE LINIJKI WŁĄCZAJĄ AUTOMATYCZNE AKTUALIZACJE ===
+// @updateURL    https://raw.githubusercontent.com/KapiJoker/SBETEST/main/menu.user.js
+// @downloadURL  https://raw.githubusercontent.com/KapiJoker/SBETEST/main/menu.user.js
+// ==========================================================
 // ==/UserScript==
 
 (function() {
