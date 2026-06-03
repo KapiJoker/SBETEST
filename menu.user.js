@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
+// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza) TEST
 // @namespace    http://tampermonkey.net/
 // @version      22.4
-// @description  Test Aktualizacji
+// @description  Test Aktualizacji Kodu
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
@@ -181,7 +181,7 @@
     headerRow.appendChild(titleGroup);
 
     const title = document.createElement('div');
-    title.innerText = '📱 CODE';
+    title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
 
