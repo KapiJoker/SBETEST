@@ -300,7 +300,7 @@
         e.stopPropagation();
         isCompactMode = !isCompactMode;
         localStorage.setItem('qrCompactMode', isCompactMode);
-        compactBtn.innerText = isCompactMode ? '✨ Pełny' : '👓 Mini';
+        compactBtn.innerText = isCompactMode ? '📏' : '🤏';
         floatingQR.style.display = 'none';
         renderList();
     };
