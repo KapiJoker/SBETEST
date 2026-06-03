@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
-// @version      22.6
+// @version      22.7
 // @description  Test Aktualizacji
 // @author       Kacper
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
