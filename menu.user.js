@@ -180,7 +180,7 @@
     headerRow.appendChild(titleGroup);
 
     const title = document.createElement('div');
-    title.innerText = '📱 CODE';
+    title.innerText = '📱 MENU';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
 
