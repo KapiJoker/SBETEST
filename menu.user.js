@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode
+// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
 // @version      24.5
-// @description  Wymuszenie nadpisywania localStorage przy pobieraniu bazy z GitHub oraz natychmiastowe odświeżenie widoku.
+// @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
@@ -78,13 +78,13 @@
     let customItems = JSON.parse(localStorage.getItem('qrCustomItems')) || defaultDatabase;
     let recentItems = JSON.parse(localStorage.getItem('qrRecentItems')) || [];
     let collapsedSections = JSON.parse(localStorage.getItem('qrCollapsedSections')) || {};
-    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || [];
+    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; 
     let menuPosition = JSON.parse(localStorage.getItem('qrMenuPosition')) || { bottom: '20px', left: '20px', top: 'auto', right: 'auto' };
     let menuSize = JSON.parse(localStorage.getItem('qrMenuSize')) || { width: '240px', height: 'auto' };
     let themeMode = localStorage.getItem('qrThemeMode') || 'dark';
     let isCompactMode = localStorage.getItem('qrCompactMode') === 'true';
     let currentTab = localStorage.getItem('qrCurrentTab') || 'stacjonarne';
-    let codeMode = localStorage.getItem('qrCodeMode') || 'qr';
+    let codeMode = localStorage.getItem('qrCodeMode') || 'qr'; 
     let selectedSearchIndex = -1;
     let savedVisibility = localStorage.getItem('qrMenuVisibility') || 'block';
     let savedQRValue = localStorage.getItem('qrLastSelectedValue');
@@ -93,7 +93,7 @@
         if (!selectElement || !textToFind) return false;
         const normalizedText = textToFind.toUpperCase().trim();
         for (let i = 0; i < selectElement.options.length; i++) {
-            if (selectElement.options[i].text.toUpperCase().trim() === normalizedText ||
+            if (selectElement.options[i].text.toUpperCase().trim() === normalizedText || 
                 selectElement.options[i].value.toUpperCase().trim() === normalizedText) {
                 selectElement.selectedIndex = i;
                 selectElement.dispatchEvent(new Event('change', { bubbles: true }));
@@ -173,11 +173,10 @@
                     try {
                         const importedData = JSON.parse(response.responseText);
                         if (Array.isArray(importedData) && importedData.length > 0) {
-                            // POPRAWKA: Czyszczenie starego cache i sztywne wymuszenie zapisu nowej bazy
                             localStorage.removeItem('qrCustomItems');
                             customItems = importedData.filter(item => item.value !== "PLACEHOLDER_EMPTY");
                             localStorage.setItem('qrCustomItems', JSON.stringify(customItems));
-
+                            
                             renderList();
                             console.log("[Baza QR] Pomyślnie nadpisano i zsynchronizowano bazę z GitHub.");
                             if (onSuccessCallback) onSuccessCallback();
@@ -271,7 +270,7 @@
     title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
-
+    
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
@@ -419,13 +418,13 @@
         btn.style.background = themeMode === 'dark' ? 'var(--qr-btn-dark)' : 'var(--qr-btn-light)';
         btn.style.color = themeMode === 'dark' ? 'var(--qr-text-dark)' : 'var(--qr-text-light)';
         btn.style.borderLeft = item.color ? `3px solid ${item.color}` : '3px solid transparent';
-
+        
         if (isTelephoneSection) {
             btn.style.borderRadius = "3px 0 0 3px";
         } else {
             btn.style.borderRadius = "3px";
         }
-
+        
         btn.onclick = (e) => { e.stopPropagation(); addToRecent(item.label, item.value, item.color, item.category); };
         btnRow.appendChild(btn);
 
@@ -450,8 +449,8 @@
                 sBtn.style.color = themeMode === 'dark' ? '#ddd' : '#333';
                 sBtn.onclick = (e) => {
                     e.stopPropagation();
-                    addToRecent(item.label, item.value, item.color, item.category);
-                    executeQuickStatus(statusCfg);
+                    addToRecent(item.label, item.value, item.color, item.category); 
+                    executeQuickStatus(statusCfg); 
                     subMenu.style.display = 'none';
                     arrowBtn.innerText = '▼';
                 };
@@ -565,7 +564,6 @@
             syncBtn.innerText = 'Pobieranie i synchronizacja...'; syncBtn.style.pointerEvents = 'none';
             fetchExternalDatabase(() => {
                 syncBtn.innerText = '✨ Baza zaktualizowana!';
-                // Automatyczne odświeżenie okna konfiguracji, aby pokazać nowe sekcje
                 setTimeout(() => { renderModalContent(); }, 800);
             });
         };
