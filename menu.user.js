@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode - Akt.
+// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
-// @version      22.3
+// @version      22.4
 // @description  Test Aktualizacji
-// @author       Kacper
+// @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_updater
 // @connect      raw.githubusercontent.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
 // @require      https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js
@@ -180,10 +181,9 @@
     headerRow.appendChild(titleGroup);
 
     const title = document.createElement('div');
-    title.innerText = '📱 MENU';
+    title.innerText = '📱 CODE';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
-
 
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
@@ -198,10 +198,10 @@
     themeBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none;";
     rightHeaderGroup.appendChild(themeBtn);
 
-    // === NOWY PRZYCISK AKTUALIZACJI ===
+    // === ZMODYFIKOWANY PRZYCISK AKTUALIZACJI BAZY ORAZ KODU SKRYPTU ===
     const updateBtn = document.createElement('button');
     updateBtn.innerText = '🔄';
-    updateBtn.title = 'Aktualizuj bazę z GitHub';
+    updateBtn.title = 'Aktualizuj bazę oraz skrypt z GitHub';
     updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none; transition: transform 0.2s;";
     rightHeaderGroup.appendChild(updateBtn);
 
@@ -211,12 +211,18 @@
         updateBtn.style.pointerEvents = 'none';
         infoStatus.innerText = '⏳ Aktualizacja...';
 
+        // 1. Aktualizacja bazy danych (JSON)
         fetchExternalDatabase();
+
+        // 2. Wymuszenie na Tampermonkey sprawdzenia nowej wersji pliku menu.user.js
+        if (typeof GM_updater !== 'undefined' && GM_updater.check) {
+            GM_updater.check();
+        }
 
         setTimeout(() => {
             updateBtn.classList.remove('qr-spin');
             updateBtn.style.pointerEvents = 'auto';
-            infoStatus.innerText = '✅ Baza aktualna!';
+            infoStatus.innerText = '✅ Sprawdzono aktualizacje!';
             setTimeout(() => { infoStatus.innerText = ''; }, 1500);
         }, 1200);
     };
@@ -749,7 +755,6 @@
         }
     });
 
-    // Prawidłowa kolejność inicjalizacji na samym końcu, gdy elementy DOM są już zadeklarowane
     applyTheme(themeMode);
     fetchExternalDatabase();
 })();
