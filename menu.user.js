@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
+// @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
 // @version      24.5
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
