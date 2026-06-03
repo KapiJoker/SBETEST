@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza) TEST
 // @namespace    http://tampermonkey.net/
-// @version      22.4
+// @version      22.5
 // @description  Test Aktualizacji Kodu
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
@@ -190,7 +190,7 @@
     headerRow.appendChild(rightHeaderGroup);
 
     const compactBtn = document.createElement('button');
-    compactBtn.innerText = isCompactMode ? '✨ Pełny' : '👓 Mini';
+    compactBtn.innerText = isCompactMode ? '↔️' : '🤏';
     compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:9px; font-weight:700; color:#0d6efd; outline:none; padding:2px;";
     rightHeaderGroup.appendChild(compactBtn);
 
@@ -200,7 +200,7 @@
 
     // === ZMODYFIKOWANY PRZYCISK AKTUALIZACJI BAZY ORAZ KODU SKRYPTU ===
     const updateBtn = document.createElement('button');
-    updateBtn.innerText = '🔄';
+    updateBtn.innerText = '↻';
     updateBtn.title = 'Aktualizuj bazę oraz skrypt z GitHub';
     updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none; transition: transform 0.2s;";
     rightHeaderGroup.appendChild(updateBtn);
