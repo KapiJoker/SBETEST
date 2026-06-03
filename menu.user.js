@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      24.3
-// @description  Nowy wygląd nagłówka (MENU ☰, nowe ikony, usunięty przycisk BRAK). Poprawione odświeżanie bazy z URL w locie.
+// @version      24.5
+// @description  Wymuszenie nadpisywania localStorage przy pobieraniu bazy z GitHub oraz natychmiastowe odświeżenie widoku.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
@@ -162,7 +162,7 @@
         });
     }
 
-    function fetchExternalDatabase() {
+    function fetchExternalDatabase(onSuccessCallback) {
         if (typeof GM_xmlhttpRequest === 'undefined') return;
         const uniqueUrl = DATABASE_URL + "?t=" + new Date().getTime();
         GM_xmlhttpRequest({
@@ -173,10 +173,14 @@
                     try {
                         const importedData = JSON.parse(response.responseText);
                         if (Array.isArray(importedData) && importedData.length > 0) {
+                            // POPRAWKA: Czyszczenie starego cache i sztywne wymuszenie zapisu nowej bazy
+                            localStorage.removeItem('qrCustomItems');
                             customItems = importedData.filter(item => item.value !== "PLACEHOLDER_EMPTY");
                             localStorage.setItem('qrCustomItems', JSON.stringify(customItems));
+
                             renderList();
-                            console.log("[Baza QR] Pomyślnie zsynchronizowano bazę z GitHub.");
+                            console.log("[Baza QR] Pomyślnie nadpisano i zsynchronizowano bazę z GitHub.");
+                            if (onSuccessCallback) onSuccessCallback();
                         }
                     } catch (e) { console.error("[Baza QR] Błąd parsowania JSON:", e); }
                 }
@@ -263,7 +267,6 @@
     titleGroup.style.cssText = "display:flex; align-items:center; gap:4px;";
     headerRow.appendChild(titleGroup);
 
-    // ZMIANA: Podmiana tekstu nagłówka z 📱 CODE na MENU ☰
     const title = document.createElement('div');
     title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
@@ -273,7 +276,6 @@
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
 
-    // ZMIANA: Podmiana '✨ Pełny' : '👓 Mini' na '📏' : '🤏'
     const compactBtn = document.createElement('button');
     compactBtn.innerText = isCompactMode ? '📏' : '🤏';
     compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:#0d6efd; padding:2px; line-height:1;";
@@ -283,17 +285,17 @@
     themeBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(themeBtn);
 
-    // ZMIANA: Podmiana ikony z 🔄 na ⟲
     const updateBtn = document.createElement('button');
     updateBtn.innerText = '⟲'; updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(updateBtn);
 
     updateBtn.onclick = (e) => {
         e.stopPropagation(); updateBtn.classList.add('qr-spin'); updateBtn.style.pointerEvents = 'none';
-        fetchExternalDatabase();
-        checkScriptUpdate((isUpToDate) => {
-            updateBtn.classList.remove('qr-spin'); updateBtn.style.pointerEvents = 'auto';
-            if (isUpToDate) { infoStatus.innerText = '✅ Aktualne!'; setTimeout(() => { infoStatus.innerText = ''; }, 2000); }
+        fetchExternalDatabase(() => {
+            checkScriptUpdate((isUpToDate) => {
+                updateBtn.classList.remove('qr-spin'); updateBtn.style.pointerEvents = 'auto';
+                if (isUpToDate) { infoStatus.innerText = '✅ Aktualne!'; setTimeout(() => { infoStatus.innerText = ''; }, 2000); }
+            });
         });
     };
 
@@ -310,7 +312,6 @@
     themeBtn.onclick = (e) => { e.stopPropagation(); applyTheme(themeMode === 'dark' ? 'light' : 'dark'); };
     compactBtn.onclick = (e) => {
         e.stopPropagation(); isCompactMode = !isCompactMode; localStorage.setItem('qrCompactMode', isCompactMode);
-        // ZMIANA: Aktualizacja ikon przy przełączaniu
         compactBtn.innerText = isCompactMode ? '📏' : '🤏'; floatingQR.style.display = 'none'; renderList();
     };
 
@@ -556,6 +557,19 @@
 
         const cardStyle = `padding:14px; border-radius:8px; background:${themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'}; border:1px solid ${themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'};`;
         const inputStyle = `width:100%; padding:8px; box-sizing:border-box; border-radius:5px; font-size:12px; margin-bottom:8px; outline:none; background:${themeMode === 'dark' ? '#11141a' : '#fff'}; border:1px solid ${themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'}; color:${themeMode === 'dark' ? '#fff' : '#000'};`;
+
+        const cardSync = document.createElement('div'); cardSync.style.cssText = cardStyle;
+        cardSync.innerHTML = `<div style="font-size:12px; font-weight:600; margin-bottom:10px; color:#ffc107;">☁️ Krok 0: Pobierz aktualną bazę z GitHub</div>`;
+        const syncBtn = document.createElement('button'); syncBtn.innerText = 'Pobierz i nadpisz bazę (GitHub)'; syncBtn.style.cssText = "width:100%; padding:8px; background:#ffc107; color:#000; border:none; border-radius:5px; font-weight:700; cursor:pointer;";
+        syncBtn.onclick = () => {
+            syncBtn.innerText = 'Pobieranie i synchronizacja...'; syncBtn.style.pointerEvents = 'none';
+            fetchExternalDatabase(() => {
+                syncBtn.innerText = '✨ Baza zaktualizowana!';
+                // Automatyczne odświeżenie okna konfiguracji, aby pokazać nowe sekcje
+                setTimeout(() => { renderModalContent(); }, 800);
+            });
+        };
+        cardSync.appendChild(syncBtn); gridForms.appendChild(cardSync);
 
         const cardSec = document.createElement('div'); cardSec.style.cssText = cardStyle;
         cardSec.innerHTML = `<div style="font-size:12px; font-weight:600; margin-bottom:10px; color:#0dcaf0;">📁 Krok 1: Utwórz nową grupę/sekcję</div>`;
