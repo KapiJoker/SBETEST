@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza) TEST
+// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
-// @version      22.5
-// @description  Test Aktualizacji Kodu
-// @author       Kacper & AI
+// @version      22.6
+// @description  Test Aktualizacji
+// @author       Kacper
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_updater
+// @grant        GM_info
 // @connect      raw.githubusercontent.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
 // @require      https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js
@@ -19,6 +19,7 @@
     'use strict';
 
     const DATABASE_URL = "https://raw.githubusercontent.com/KapiJoker/SBETEST/refs/heads/main/testqr.json";
+    const SCRIPT_URL = "https://raw.githubusercontent.com/KapiJoker/SBETEST/main/menu.user.js";
 
     const defaultDatabase = [
         { category: "stacjonarne", section: "---- TELEFONY ----", label: "6863i", value: "6863i 80C00001AAA-A", color: "#0dcaf0" }
@@ -27,14 +28,63 @@
     let customItems = JSON.parse(localStorage.getItem('qrCustomItems')) || defaultDatabase;
     let recentItems = JSON.parse(localStorage.getItem('qrRecentItems')) || [];
     let collapsedSections = JSON.parse(localStorage.getItem('qrCollapsedSections')) || {};
-    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || [];
+    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; 
     let menuPosition = JSON.parse(localStorage.getItem('qrMenuPosition')) || { bottom: '20px', left: '20px', top: 'auto', right: 'auto' };
     let menuSize = JSON.parse(localStorage.getItem('qrMenuSize')) || { width: '240px', height: 'auto' };
     let themeMode = localStorage.getItem('qrThemeMode') || 'dark';
     let isCompactMode = localStorage.getItem('qrCompactMode') === 'true';
     let currentTab = localStorage.getItem('qrCurrentTab') || 'stacjonarne';
-    let codeMode = localStorage.getItem('qrCodeMode') || 'qr';
+    let codeMode = localStorage.getItem('qrCodeMode') || 'qr'; 
     let selectedSearchIndex = -1;
+
+    // Funkcja parsująca numer wersji z surowego kodu JS
+    function parseVersion(scriptText) {
+        const match = scriptText.match(/\/\/\s*@version\s+([^\s\r\n]+)/);
+        return match ? match[1].trim() : null;
+    }
+
+    // Funkcja sprawdzająca i wymuszająca aktualizację samego skryptu menu.user.js
+    function checkScriptUpdate(onComplete) {
+        if (typeof GM_xmlhttpRequest === 'undefined') { if(onComplete) onComplete(); return; }
+
+        // Agresywne ominięcie pamięci podręcznej (Cache-Buster)
+        const uniqueScriptUrl = SCRIPT_URL + "?t=" + new Date().getTime();
+
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: uniqueScriptUrl,
+            anonymous: true,
+            // WYMUSZENIE BRAKU CACHE NA POZIOMIE NAGŁÓWKÓW HTTP
+            headers: { 
+                "Cache-Control": "no-cache, no-store, must-revalidate", 
+                "Pragma": "no-cache",
+                "Expires": "0"
+            },
+            onload: function(response) {
+                if (response.status === 200) {
+                    const remoteVersion = parseVersion(response.responseText);
+                    const localVersion = GM_info.script.version.trim();
+
+                    console.log(`[Aktualizacja] Wersja na GitHub: ${remoteVersion} | Wersja lokalna: ${localVersion}`);
+
+                    if (remoteVersion && remoteVersion !== localVersion) {
+                        console.log(`Wykryto nową wersję skryptu! Rozpoczynanie instalacji...`);
+                        infoStatus.innerText = '🚀 Nowa wersja! Instalacja...';
+                        infoStatus.style.color = '#ffc107';
+                        
+                        // Przekierowanie otwiera instalator w Tampermonkey
+                        setTimeout(() => { window.location.href = SCRIPT_URL; }, 1000);
+                        if (onComplete) onComplete(false); // Blokujemy komunikat "Wszystko aktualne"
+                    } else {
+                        if (onComplete) onComplete(true);
+                    }
+                } else {
+                    if (onComplete) onComplete(true);
+                }
+            },
+            onerror: function() { if (onComplete) onComplete(true); }
+        });
+    }
 
     function fetchExternalDatabase() {
         if (typeof GM_xmlhttpRequest === 'undefined') return;
@@ -48,7 +98,8 @@
             headers: {
                 "Accept": "application/json",
                 "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache"
+                "Pragma": "no-cache",
+                "Expires": "0"
             },
             onload: function(response) {
                 if (response.status === 200) {
@@ -114,7 +165,7 @@
         .qr-scrollable-list::-webkit-scrollbar { width: 4px; }
         .qr-scrollable-list::-webkit-scrollbar-track { background: transparent; }
         .qr-scrollable-list::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 10px; }
-
+        
         @keyframes qr-spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -165,7 +216,7 @@
             if (rect.left > window.innerWidth / 2) { floatingQR.style.left = (rect.left - 290) + 'px'; }
             else { floatingQR.style.left = (rect.right + 10) + 'px'; }
         }
-
+        
         floatingQR.style.top = rect.top + 'px';
         floatingQR.style.backgroundColor = themeMode === 'dark' ? '#2b3035' : '#f8f9fa';
         floatingQR.style.border = themeMode === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.15)';
@@ -184,13 +235,13 @@
     title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
-
+    
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
 
     const compactBtn = document.createElement('button');
-    compactBtn.innerText = isCompactMode ? '↔️' : '🤏';
+    compactBtn.innerText = isCompactMode ? '📏' : '🤏';
     compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:9px; font-weight:700; color:#0d6efd; outline:none; padding:2px;";
     rightHeaderGroup.appendChild(compactBtn);
 
@@ -198,9 +249,8 @@
     themeBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none;";
     rightHeaderGroup.appendChild(themeBtn);
 
-    // === ZMODYFIKOWANY PRZYCISK AKTUALIZACJI BAZY ORAZ KODU SKRYPTU ===
     const updateBtn = document.createElement('button');
-    updateBtn.innerText = '↻';
+    updateBtn.innerText = '⟲';
     updateBtn.title = 'Aktualizuj bazę oraz skrypt z GitHub';
     updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none; transition: transform 0.2s;";
     rightHeaderGroup.appendChild(updateBtn);
@@ -208,23 +258,23 @@
     updateBtn.onclick = (e) => {
         e.stopPropagation();
         updateBtn.classList.add('qr-spin');
-        updateBtn.style.pointerEvents = 'none';
-        infoStatus.innerText = '⏳ Aktualizacja...';
-
+        updateBtn.style.pointerEvents = 'none'; 
+        infoStatus.innerText = '⏳ Sprawdzanie...';
+        infoStatus.style.color = '#198754';
+        
         // 1. Aktualizacja bazy danych (JSON)
         fetchExternalDatabase();
-
-        // 2. Wymuszenie na Tampermonkey sprawdzenia nowej wersji pliku menu.user.js
-        if (typeof GM_updater !== 'undefined' && GM_updater.check) {
-            GM_updater.check();
-        }
-
-        setTimeout(() => {
+        
+        // 2. Aktywne pobranie pliku .js i weryfikacja wersji bez cache
+        checkScriptUpdate((isUpToDate) => {
             updateBtn.classList.remove('qr-spin');
             updateBtn.style.pointerEvents = 'auto';
-            infoStatus.innerText = '✅ Sprawdzono aktualizacje!';
-            setTimeout(() => { infoStatus.innerText = ''; }, 1500);
-        }, 1200);
+            
+            if (isUpToDate) {
+                infoStatus.innerText = '✅ Wszystko aktualne!';
+                setTimeout(() => { infoStatus.innerText = ''; }, 2000);
+            }
+        });
     };
 
     function applyTheme(theme) {
@@ -336,7 +386,7 @@
 
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = '🔍 Szukaj kodu...';
+    searchInput.placeholder = '⌕ Szukaj kodu...';
     searchInput.style.cssText = "width:100%; box-sizing:border-box; padding:4px 6px; margin-bottom:6px; border-radius:4px; font-size:10px; outline:none; flex-shrink:0;";
     menu.appendChild(searchInput);
 
@@ -376,7 +426,7 @@
             } else {
                 const svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 floatingQRWrapper.appendChild(svgNode);
-
+                
                 let barWidth = 1.6;
                 if (value.length > 15) barWidth = 1.1;
                 else if (value.length > 10) barWidth = 1.3;
@@ -384,18 +434,18 @@
                 JsBarcode(svgNode, value, {
                     format: "CODE128",
                     width: barWidth,
-                    height: 55,
+                    height: 55,         
                     displayValue: true,
                     fontSize: 11,
-                    margin: 12,
+                    margin: 12,         
                     background: "#ffffff",
                     lineColor: "#000000"
                 });
             }
             floatingQR.style.display = 'flex';
             updateFloatingQRPosition();
-        } catch(e) {
-            console.error("Błąd generowania kodu:", e);
+        } catch(e) { 
+            console.error("Błąd generowania kodu:", e); 
             floatingQRWrapper.innerText = "Błąd formatu danych";
         }
 
@@ -644,14 +694,14 @@
 
         customItems.forEach((item, index) => {
             if(item.value === "PLACEHOLDER_EMPTY") return;
-
+            
             const isHidden = hiddenItems.includes(item.value);
-
+            
             const itemRow = document.createElement('div'); itemRow.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:6px; border-bottom:1px solid rgba(128,128,128,0.1); font-size:11px;";
             if (isHidden) itemRow.style.opacity = '0.4';
 
             itemRow.innerHTML = `<div>${item.category === 'komorkowe' ? '📱' : '🖥️'} <span style="background:${item.color || '#6c757d'}; color:#fff; padding:1px 4px; border-radius:3px;">${item.section}</span> <b>${item.label}</b></div>`;
-
+            
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = "display:flex; gap:12px; align-items:center;";
 
@@ -672,10 +722,10 @@
 
             const delBtn = document.createElement('button'); delBtn.innerText = '❌'; delBtn.style.cssText = "background:none; border:none; cursor:pointer;";
             delBtn.onclick = () => { if (confirm("Usunąć?")) { customItems.splice(index, 1); localStorage.setItem('qrCustomItems', JSON.stringify(customItems)); renderList(); renderModalContent(); } };
-
+            
             btnContainer.appendChild(hideBtn);
             btnContainer.appendChild(delBtn);
-            itemRow.appendChild(btnContainer);
+            itemRow.appendChild(btnContainer); 
             itemsScrollContainer.appendChild(itemRow);
         });
 
