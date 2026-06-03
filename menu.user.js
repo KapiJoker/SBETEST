@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
 // @namespace    http://tampermonkey.net/
-// @version      22.1
-// @description  Wersja z możliwością wyboru generowania kodu QR lub kodu kreskowego (Barcode). Podział na zakładki i sekcje. Centralna baza GitHub. Możliwość ukrywania wybranych kodów.
-// @author       Kacper & AI
+// @version      22.2
+// @description  Wersja z możliwością wyboru generowania kodu QR lub kodu kreskowego (Barcode). Podział na zakładki i sekcje. Centralna baza GitHub. Możliwość ukrywania wybranych kodów. Dodany przycisk ręcznej aktualizacji.
+// @author       Kacper
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
 // @connect      raw.githubusercontent.com
@@ -26,13 +26,13 @@
     let customItems = JSON.parse(localStorage.getItem('qrCustomItems')) || defaultDatabase;
     let recentItems = JSON.parse(localStorage.getItem('qrRecentItems')) || [];
     let collapsedSections = JSON.parse(localStorage.getItem('qrCollapsedSections')) || {};
-    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; 
+    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || [];
     let menuPosition = JSON.parse(localStorage.getItem('qrMenuPosition')) || { bottom: '20px', left: '20px', top: 'auto', right: 'auto' };
     let menuSize = JSON.parse(localStorage.getItem('qrMenuSize')) || { width: '240px', height: 'auto' };
     let themeMode = localStorage.getItem('qrThemeMode') || 'dark';
     let isCompactMode = localStorage.getItem('qrCompactMode') === 'true';
     let currentTab = localStorage.getItem('qrCurrentTab') || 'stacjonarne';
-    let codeMode = localStorage.getItem('qrCodeMode') || 'qr'; 
+    let codeMode = localStorage.getItem('qrCodeMode') || 'qr';
     let selectedSearchIndex = -1;
 
     function fetchExternalDatabase() {
@@ -113,6 +113,12 @@
         .qr-scrollable-list::-webkit-scrollbar { width: 4px; }
         .qr-scrollable-list::-webkit-scrollbar-track { background: transparent; }
         .qr-scrollable-list::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 10px; }
+
+        @keyframes qr-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .qr-spin { animation: qr-spin 0.8s linear infinite; }
     `;
     document.head.appendChild(styleEl);
 
@@ -158,7 +164,7 @@
             if (rect.left > window.innerWidth / 2) { floatingQR.style.left = (rect.left - 290) + 'px'; }
             else { floatingQR.style.left = (rect.right + 10) + 'px'; }
         }
-        
+
         floatingQR.style.top = rect.top + 'px';
         floatingQR.style.backgroundColor = themeMode === 'dark' ? '#2b3035' : '#f8f9fa';
         floatingQR.style.border = themeMode === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.15)';
@@ -178,21 +184,7 @@
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
 
-    const brakBtn = document.createElement('button');
-    brakBtn.innerText = 'Brak';
-    brakBtn.style.cssText = "padding:1px 5px; font-size:9px; font-weight:bold; cursor:pointer; border-radius:3px; border:none; background:#dc3545; color:#fff; line-height:1.1;";
-    brakBtn.onclick = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText('brak').then(() => {
-            infoStatus.innerText = '📋 Brak!';
-            setTimeout(() => { infoStatus.innerText = ''; }, 1000);
-        });
-        savedQRValue = 'brak';
-        localStorage.setItem('qrLastSelectedValue', 'brak');
-        showQR('brak');
-    };
-    titleGroup.appendChild(brakBtn);
-    
+
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
@@ -205,6 +197,29 @@
     const themeBtn = document.createElement('button');
     themeBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none;";
     rightHeaderGroup.appendChild(themeBtn);
+
+    // === NOWY PRZYCISK AKTUALIZACJI ===
+    const updateBtn = document.createElement('button');
+    updateBtn.innerText = '🔄';
+    updateBtn.title = 'Aktualizuj bazę z GitHub';
+    updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1; outline:none; transition: transform 0.2s;";
+    rightHeaderGroup.appendChild(updateBtn);
+
+    updateBtn.onclick = (e) => {
+        e.stopPropagation();
+        updateBtn.classList.add('qr-spin');
+        updateBtn.style.pointerEvents = 'none';
+        infoStatus.innerText = '⏳ Aktualizacja...';
+
+        fetchExternalDatabase();
+
+        setTimeout(() => {
+            updateBtn.classList.remove('qr-spin');
+            updateBtn.style.pointerEvents = 'auto';
+            infoStatus.innerText = '✅ Baza aktualna!';
+            setTimeout(() => { infoStatus.innerText = ''; }, 1500);
+        }, 1200);
+    };
 
     function applyTheme(theme) {
         themeMode = theme;
@@ -355,7 +370,7 @@
             } else {
                 const svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 floatingQRWrapper.appendChild(svgNode);
-                
+
                 let barWidth = 1.6;
                 if (value.length > 15) barWidth = 1.1;
                 else if (value.length > 10) barWidth = 1.3;
@@ -363,18 +378,18 @@
                 JsBarcode(svgNode, value, {
                     format: "CODE128",
                     width: barWidth,
-                    height: 55,         
+                    height: 55,
                     displayValue: true,
                     fontSize: 11,
-                    margin: 12,         
+                    margin: 12,
                     background: "#ffffff",
                     lineColor: "#000000"
                 });
             }
             floatingQR.style.display = 'flex';
             updateFloatingQRPosition();
-        } catch(e) { 
-            console.error("Błąd generowania kodu:", e); 
+        } catch(e) {
+            console.error("Błąd generowania kodu:", e);
             floatingQRWrapper.innerText = "Błąd formatu danych";
         }
 
@@ -425,6 +440,32 @@
         return btn;
     }
 
+    const manageBtn = document.createElement('div');
+    manageBtn.innerText = '⚙️ Ustawienia bazy';
+    manageBtn.style.cssText = "font-size:10px; color:#6c757d; cursor:pointer; text-align:center; margin-top:6px; border-top:1px solid rgba(128,128,128,0.2); padding-top:6px; font-weight:600; flex-shrink:0;";
+    menu.appendChild(manageBtn);
+
+    const resizer = document.createElement('div');
+    resizer.style.cssText = "position:absolute; right:2px; bottom:2px; width:10px; height:10px; cursor:se-resize; user-select:none; font-size:8px; color:#6c757d; display:flex; align-items:flex-end; justify-content:flex-end;";
+    resizer.innerText = "◢";
+    menu.appendChild(resizer);
+
+    resizer.addEventListener('mousedown', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        window.addEventListener('mousemove', resizeMenu);
+        window.addEventListener('mouseup', stopResizeMenu);
+    });
+    function resizeMenu(e) {
+        if(isCompactMode) return;
+        menu.style.width = (e.clientX - menu.getBoundingClientRect().left) + 'px';
+        menu.style.height = (e.clientY - menu.getBoundingClientRect().top) + 'px';
+    }
+    function stopResizeMenu() {
+        window.removeEventListener('mousemove', resizeMenu);
+        window.removeEventListener('mouseup', stopResizeMenu);
+        localStorage.setItem('qrMenuSize', JSON.stringify({ width: menu.style.width, height: menu.style.height }));
+    }
+
     function renderList() {
         listContainer.innerHTML = '';
         allButtons = [];
@@ -437,8 +478,8 @@
             menu.style.height = 'auto';
             tabsContainer.style.display = 'flex';
             customGenInput.style.display = 'none';
-            manageBtn.style.display = 'none';
-            resizer.style.display = 'none';
+            if (typeof manageBtn !== 'undefined' && manageBtn) manageBtn.style.display = 'none';
+            if (typeof resizer !== 'undefined' && resizer) resizer.style.display = 'none';
 
             customItems.forEach(item => {
                 if (item.value === "PLACEHOLDER_EMPTY" || hiddenItems.includes(item.value)) return;
@@ -460,8 +501,8 @@
             menu.style.height = menuSize.height;
             tabsContainer.style.display = 'flex';
             customGenInput.style.display = 'block';
-            manageBtn.style.display = 'block';
-            resizer.style.display = 'flex';
+            if (typeof manageBtn !== 'undefined' && manageBtn) manageBtn.style.display = 'block';
+            if (typeof resizer !== 'undefined' && resizer) resizer.style.display = 'flex';
 
             const filteredRecent = recentItems.filter(item => (item.category || 'stacjonarne') === currentTab && !hiddenItems.includes(item.value));
             if (filteredRecent.length > 0) {
@@ -516,32 +557,6 @@
         }
 
         if (savedQRValue && !hiddenItems.includes(savedQRValue)) showQR(savedQRValue);
-    }
-
-    const manageBtn = document.createElement('div');
-    manageBtn.innerText = '⚙️ Ustawienia bazy';
-    manageBtn.style.cssText = "font-size:10px; color:#6c757d; cursor:pointer; text-align:center; margin-top:6px; border-top:1px solid rgba(128,128,128,0.2); padding-top:6px; font-weight:600; flex-shrink:0;";
-    menu.appendChild(manageBtn);
-
-    const resizer = document.createElement('div');
-    resizer.style.cssText = "position:absolute; right:2px; bottom:2px; width:10px; height:10px; cursor:se-resize; user-select:none; font-size:8px; color:#6c757d; display:flex; align-items:flex-end; justify-content:flex-end;";
-    resizer.innerText = "◢";
-    menu.appendChild(resizer);
-
-    resizer.addEventListener('mousedown', function(e) {
-        e.preventDefault(); e.stopPropagation();
-        window.addEventListener('mousemove', resizeMenu);
-        window.addEventListener('mouseup', stopResizeMenu);
-    });
-    function resizeMenu(e) {
-        if(isCompactMode) return;
-        menu.style.width = (e.clientX - menu.getBoundingClientRect().left) + 'px';
-        menu.style.height = (e.clientY - menu.getBoundingClientRect().top) + 'px';
-    }
-    function stopResizeMenu() {
-        window.removeEventListener('mousemove', resizeMenu);
-        window.removeEventListener('mouseup', stopResizeMenu);
-        localStorage.setItem('qrMenuSize', JSON.stringify({ width: menu.style.width, height: menu.style.height }));
     }
 
     const modalOverlay = document.createElement('div');
@@ -623,14 +638,14 @@
 
         customItems.forEach((item, index) => {
             if(item.value === "PLACEHOLDER_EMPTY") return;
-            
+
             const isHidden = hiddenItems.includes(item.value);
-            
+
             const itemRow = document.createElement('div'); itemRow.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:6px; border-bottom:1px solid rgba(128,128,128,0.1); font-size:11px;";
             if (isHidden) itemRow.style.opacity = '0.4';
 
             itemRow.innerHTML = `<div>${item.category === 'komorkowe' ? '📱' : '🖥️'} <span style="background:${item.color || '#6c757d'}; color:#fff; padding:1px 4px; border-radius:3px;">${item.section}</span> <b>${item.label}</b></div>`;
-            
+
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = "display:flex; gap:12px; align-items:center;";
 
@@ -651,10 +666,10 @@
 
             const delBtn = document.createElement('button'); delBtn.innerText = '❌'; delBtn.style.cssText = "background:none; border:none; cursor:pointer;";
             delBtn.onclick = () => { if (confirm("Usunąć?")) { customItems.splice(index, 1); localStorage.setItem('qrCustomItems', JSON.stringify(customItems)); renderList(); renderModalContent(); } };
-            
+
             btnContainer.appendChild(hideBtn);
             btnContainer.appendChild(delBtn);
-            itemRow.appendChild(btnContainer); 
+            itemRow.appendChild(btnContainer);
             itemsScrollContainer.appendChild(itemRow);
         });
 
@@ -734,6 +749,7 @@
         }
     });
 
+    // Prawidłowa kolejność inicjalizacji na samym końcu, gdy elementy DOM są już zadeklarowane
     applyTheme(themeMode);
     fetchExternalDatabase();
 })();
