@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Menu z Kodami QR & Barcode - Stacjonarne & Komórkowe (Centralna Baza)
+// @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      24.1
-// @description  Rozdzielone QUICK_STATUSES dla stacjonarnych i komórkowych. Menu tylko dla sekcji "TELEFONY". Automatyczne klikanie confirmComment.
+// @version      24.3
+// @description  Nowy wygląd nagłówka (MENU ☰, nowe ikony, usunięty przycisk BRAK). Poprawione odświeżanie bazy z URL w locie.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
@@ -176,8 +176,9 @@
                             customItems = importedData.filter(item => item.value !== "PLACEHOLDER_EMPTY");
                             localStorage.setItem('qrCustomItems', JSON.stringify(customItems));
                             renderList();
+                            console.log("[Baza QR] Pomyślnie zsynchronizowano bazę z GitHub.");
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) { console.error("[Baza QR] Błąd parsowania JSON:", e); }
                 }
             }
         });
@@ -262,6 +263,7 @@
     titleGroup.style.cssText = "display:flex; align-items:center; gap:4px;";
     headerRow.appendChild(titleGroup);
 
+    // ZMIANA: Podmiana tekstu nagłówka z 📱 CODE na MENU ☰
     const title = document.createElement('div');
     title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
@@ -271,15 +273,17 @@
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
 
+    // ZMIANA: Podmiana '✨ Pełny' : '👓 Mini' na '📏' : '🤏'
     const compactBtn = document.createElement('button');
     compactBtn.innerText = isCompactMode ? '📏' : '🤏';
-    compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:9px; font-weight:700; color:#0d6efd; padding:2px;";
+    compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:#0d6efd; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(compactBtn);
 
     const themeBtn = document.createElement('button');
     themeBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(themeBtn);
 
+    // ZMIANA: Podmiana ikony z 🔄 na ⟲
     const updateBtn = document.createElement('button');
     updateBtn.innerText = '⟲'; updateBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(updateBtn);
@@ -306,6 +310,7 @@
     themeBtn.onclick = (e) => { e.stopPropagation(); applyTheme(themeMode === 'dark' ? 'light' : 'dark'); };
     compactBtn.onclick = (e) => {
         e.stopPropagation(); isCompactMode = !isCompactMode; localStorage.setItem('qrCompactMode', isCompactMode);
+        // ZMIANA: Aktualizacja ikon przy przełączaniu
         compactBtn.innerText = isCompactMode ? '📏' : '🤏'; floatingQR.style.display = 'none'; renderList();
     };
 
@@ -399,8 +404,6 @@
     function createButton(item) {
         const itemSection = item.section ? item.section.toUpperCase() : '';
         const itemCategory = item.category || 'stacjonarne';
-
-        // WARUNEK: Czy sekcja zawiera słowo "TELEFONY"
         const isTelephoneSection = itemSection.includes("TELEFONY");
 
         const rowContainer = document.createElement('div');
@@ -425,7 +428,6 @@
         btn.onclick = (e) => { e.stopPropagation(); addToRecent(item.label, item.value, item.color, item.category); };
         btnRow.appendChild(btn);
 
-        // Generuj menu podstrzałkowe wyłącznie dla sekcji "TELEFONY"
         if (isTelephoneSection) {
             const arrowBtn = document.createElement('button');
             arrowBtn.innerText = '▼';
@@ -438,7 +440,6 @@
             subMenu.style.background = themeMode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.04)';
             subMenu.style.borderLeft = item.color ? `2px solid ${item.color}` : '2px solid rgba(128,128,128,0.3)';
 
-            // NOWOŚĆ: Wybór odpowiedniej listy statusów na podstawie kategorii elementu
             const activeStatusesList = (itemCategory === 'komorkowe') ? QUICK_STATUSES_KOMORKOWE : QUICK_STATUSES_STACJONARNE;
 
             activeStatusesList.forEach(statusCfg => {
