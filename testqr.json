@@ -33,6 +33,7 @@
 
   { "category": "komorkowe", "section": "================= KOMÓRKOWE =================", "label": "NAGŁÓWEK INFORMACYJNY", "value": "PLACEHOLDER_EMPTY" },
 
+  { "category": "stacjonarne", "section": "---- TELEFONY ----", "label": "KODY", "value": " ", "color": "#0dcaf0" },
   { "category": "komorkowe", "section": "---- USTERKI ----", "label": "Odnowienie kompletu", "value": "Odnowienie kompletu", "color": "#ffc107" },
   { "category": "komorkowe", "section": "---- USTERKI ----", "label": "Usunięto nieprawidłowości", "value": "Usunieto nieprawidlowosci", "color": "#ffc107" },
   { "category": "komorkowe", "section": "---- LUTOWANIE ----", "label": "Złącze HF", "value": "Wymiana zlacza HF", "color": "#ababab" },
