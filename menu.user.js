@@ -72,6 +72,12 @@
             status: "BER",
             berIssue: "U100",
             comment: "Świeci / Miga Dioda"
+        },
+        {
+            label: "BER (ON/OFF)",
+            status: "BER",
+            berIssue: "Nie włącza się",
+            comment: "Nie włącza się"
         }
     ];
 
