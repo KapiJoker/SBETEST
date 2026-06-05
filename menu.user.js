@@ -62,9 +62,10 @@
             comment: "Ślady cieczy na płycie"
         },
         {
-            label: "🔄 REFRESH",
-            status: "CZEKA NA QC",
-            comment: "Czyszczenie i pakowanie końcowe."
+            label: "BER (Dioda)",
+            status: "BER",
+            berIssue: "U100",
+            comment: "Świeci / Miga Dioda"
         }
     ];
 
