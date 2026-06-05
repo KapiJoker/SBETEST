@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      24.6
+// @version      24.7
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
@@ -38,6 +38,12 @@
             status: "BER",
             berIssue: "Uszkodzenie mechaniczne (MD)",
             comment: "Urwany RJ-45"
+        },
+        {
+            label: "BER (ON/OFF)",
+            status: "BER",
+            berIssue: "Nie włącza się",
+            comment: "Nie włącza się"
         },
         {
             label: "Usunięto nieprawidłowości",
