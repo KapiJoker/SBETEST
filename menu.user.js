@@ -28,6 +28,11 @@
             comment: "Odnowienie Kompletu"
         },
         {
+            label: "Usunięto nieprawidłowości",
+            status: "CZEKA NA QC",
+            comment: "Usunięto nieprawidłowości"
+        },
+        {
             label: "BER (Zalanie)",
             status: "BER",
             berIssue: "Ślady cieczy (LD)",
@@ -46,10 +51,10 @@
             comment: "Nie włącza się"
         },
         {
-            label: "Usunięto nieprawidłowości",
-            status: "CZEKA NA QC",
-            comment: "Usunięto nieprawidłowości"
-        }
+            label: "Lutowanie Głośnika",
+            status: "CZEKA NA LUTOWANIE",
+            comment: "Wymiana głośnika"
+        },
     ];
 
     // =========================================================================
