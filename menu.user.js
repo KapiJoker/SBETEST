@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      25.1
+// @version      25.11
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
@@ -51,12 +51,6 @@
             comment: "Nie włącza się"
         },
         {
-            label: "BER (U100)",
-            status: "BER",
-            berIssue: "U100",
-            comment: "U100"
-        },
-        {
             label: "Lutowanie Głośnika",
             status: "CZEKA NA LUTOWANIE",
             comment: "Wymiana głośnika"
@@ -94,6 +88,12 @@
             status: "BER",
             berIssue: "Port USB",
             comment: "Nie wykrywa USB"
+        },
+        {
+            label: "BER (U100)",
+            status: "BER",
+            berIssue: "U100",
+            comment: "U100"
         },
         {
             label: "BER (ON/OFF)",
