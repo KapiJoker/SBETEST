@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      25.0
+// @version      25.1
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
@@ -49,6 +49,12 @@
             status: "BER",
             berIssue: "Nie włącza się",
             comment: "Nie włącza się"
+        },
+        {
+            label: "BER (U100)",
+            status: "BER",
+            berIssue: "U100",
+            comment: "U100"
         },
         {
             label: "Lutowanie Głośnika",
