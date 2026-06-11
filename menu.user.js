@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      25.11
+// @version      25.2
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
