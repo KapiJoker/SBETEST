@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      24.9
+// @version      25.0
 // @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
@@ -82,6 +82,12 @@
             status: "BER",
             berIssue: "U100",
             comment: "Świeci / Miga Dioda"
+        },
+        {
+            label: "BER (USB)",
+            status: "BER",
+            berIssue: "Port USB",
+            comment: "Nie wykrywa USB"
         },
         {
             label: "BER (ON/OFF)",
