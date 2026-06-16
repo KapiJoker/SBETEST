@@ -535,327 +535,359 @@
     // SEKCJA 2: WIDOKI SZCZEGÓŁOWE I PANEL
     // ==========================================
     function stworzPelnyEkranStats() {
-        let archiwum = {};
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                let k = localStorage.key(i);
-                if (k && k.startsWith("mitel_stats_") && k !== KLUCZ_DNIA) {
-                    archiwum[k] = JSON.parse(localStorage.getItem(k));
-                }
+    let archiwum = {};
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            let k = localStorage.key(i);
+            if (k && k.startsWith("mitel_stats_") && k !== KLUCZ_DNIA) {
+                archiwum[k] = JSON.parse(localStorage.getItem(k));
             }
-        } catch(e) {}
+        }
+    } catch(e) {}
 
-        let daneOkresow = {
-            dzis: daneDzis,
-            tydzien: obliczDaneOkresu(7, archiwum),
-            miesiac: obliczDaneOkresu(30, archiwum)
-        };
+    let daneOkresow = {
+        dzis: daneDzis,
+        tydzien: obliczDaneOkresu(7, archiwum),
+        miesiac: obliczDaneOkresu(30, archiwum)
+    };
 
-        let wybranaDataFiltr = null;
+    let wybranaDataFiltr = null;
 
-        const btnZamknij = document.getElementById('zamknij-stats-btn');
-            if (btnZamknij) {
-            btnZamknij.addEventListener('click', () => {
-        const overlay = document.getElementById('mitel-stats-overlay');
-        if (overlay) overlay.remove();
-        });
+    // --- POPRAWKA: Delegacja zdarzeń ---
+    // Nasłuchujemy kliknięć na dokumencie. Nie musimy szukać przycisków w setTimeout!
+    document.addEventListener('click', function(e) {
+        if (!e.target) return;
+
+        // 1. Zamykanie okna
+        if (e.target.id === 'zamknij-stats-btn') {
+            const overlay = document.getElementById('mitel-stats-overlay');
+            if (overlay) overlay.remove();
         }
 
+        // 2. Kopiowanie SN (używamy delegacji)
+        if (e.target.classList.contains('hud-copy-trigger-btn')) {
+            const sn = e.target.getAttribute('data-sn');
+            if (sn) {
+                navigator.clipboard.writeText(sn);
+                e.target.innerText = "✅ Skopiowano!";
+                setTimeout(() => e.target.innerText = "📋 Kopiuj", 2000);
+            }
+        }
 
-        function generujHtmlAutomatyzacji() {
-            let skrot = pobierzKlawiszSkrotu();
+        // 3. Reset filtra
+        if (e.target.id === 'hud-cal-reset-btn') {
+            wybranaDataFiltr = null;
+            odswiezWidokHUD();
+        }
+
+        // 4. Toggle kalendarza
+        if (e.target.id === 'hud-cal-toggle-view-btn') {
+            let stan = pobierzCzyKalendarzRozwiniety();
+            localStorage.setItem('mitel_cal_expanded', !stan);
+            odswiezWidokHUD();
+        }
+    });
+
+    // --- ZMIANA: Obsługa kliknięć w kalendarzu (delegacja) ---
+    document.addEventListener('click', function(e) {
+        const calCell = e.target.closest('.hud-cal-cell');
+        if (calCell) {
+            wybranaDataFiltr = calCell.getAttribute('data-date');
+            odswiezWidokHUD();
+        }
+    });
+
+
+    function generujHtmlAutomatyzacji() {
+        let skrot = pobierzKlawiszSkrotu();
+        return `
+            <div class="themed-card" style="border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; font-size:11px;">
+                <strong>⚙️ Konfiguracja & Skróty klawiszowe</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.06); padding:6px 10px; border-radius:6px; border:1px solid var(--border-card);">
+                    <span>Przełączanie widoczności HUD:</span>
+                    <input type="text" id="mitel-key-config-input" value="${skrot}" readonly style="width:70px; text-align:center; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); font-weight:bold; padding:2px; border-radius:4px; cursor:pointer;">
+                </div>
+                <div style="height:1px; background:rgba(128,128,128,0.2); margin:4px 0;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>📋 Log i historia napraw (Dzisiaj)</strong>
+                    <input type="text" id="mitel-sn-search-input" placeholder="Szukaj po SN / Modelu..." style="width:160px; padding:4px 8px; font-size:10px; border-radius:4px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main);">
+                </div>
+                <div style="max-height:160px; overflow-y:auto; border:1px solid var(--border-card); border-radius:6px; background: var(--bg-card) !important;">
+                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:10px; background: var(--bg-card) !important; color: var(--text-main) !important;">
+                        <thead class="themed-dark-bg" style="position:sticky; top:0; font-weight:bold; background: var(--bg-darker) !important;">
+                            <tr>
+                                <th style="padding:6px; border-bottom:1px solid var(--border-card);">Czas</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border-card);">Typ</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border-card);">Model</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border-card);">Numer Seryjny</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mitel-repair-table-body" style="background: var(--bg-card) !important;">
+                            ${renderujWierszeNapraw()}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderujWierszeNapraw(filtr = '') {
+        if (!daneDzis.listaNapraw || daneDzis.listaNapraw.length === 0) {
+            return `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:10px; background: var(--bg-card) !important;">Brak wpisów w historii na dziś.</td></tr>`;
+        }
+        let f = filtr.toUpperCase();
+        let tab = daneDzis.listaNapraw.filter(x => x.model.toUpperCase().includes(f) || x.sn.toUpperCase().includes(f) || x.typ.toUpperCase().includes(f));
+        if (tab.length === 0) {
+            return `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:10px; background: var(--bg-card) !important;">Brak wyników spełniających kryteria.</td></tr>`;
+        }
+        return tab.map(x => {
+            let cTyp = '#4ade80';
+            if(x.typ === 'BER') cTyp = '#f87171';
+            if(x.typ === 'QC') cTyp = '#818cf8';
             return `
-                <div class="themed-card" style="border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; font-size:11px;">
-                    <strong>⚙️ Konfiguracja & Skróty klawiszowe</strong>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.06); padding:6px 10px; border-radius:6px; border:1px solid var(--border-card);">
-                        <span>Przełączanie widoczności HUD:</span>
-                        <input type="text" id="mitel-key-config-input" value="${skrot}" readonly style="width:70px; text-align:center; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); font-weight:bold; padding:2px; border-radius:4px; cursor:pointer;">
+                <tr style="border-bottom:1px solid var(--border-card); background: var(--bg-card) !important; color: var(--text-main) !important;">
+                    <td style="padding:6px; font-family:monospace; opacity:0.8; color: var(--text-main) !important;">${x.czas}</td>
+                    <td style="padding:6px; font-weight:bold; color:${cTyp} !important;">${x.typ}</td>
+                    <td style="padding:6px; font-weight:600; color: var(--text-main) !important;">${x.model}</td>
+                    <td style="padding:6px; font-family:monospace; display:flex; justify-content:space-between; align-items:center; gap:4px; color: var(--text-main) !important;">
+                        <span>${x.sn}</span>
+                        ${x.sn !== 'Brak SN' && x.sn !== 'Z rejestru' ? `<button class="hud-copy-trigger-btn" data-sn="${x.sn}" style="background:rgba(128,128,128,0.15); border:1px solid var(--border); color:var(--text-main) !important; font-size:8px; padding:1px 4px; border-radius:3px; cursor:pointer;">📋 Kopiuj</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function generujHtmlKarty(daneOkresowe, tytulOkresu, czyPokazacCel = false, liczbaDniKalendarza = 0) {
+        let daneDoWyswietlenia = daneOkresowe;
+        let naglowekOkresu = tytulOkresu;
+
+        const isDark = pobierzMotyw() === 'dark';
+        const koldysk = isDark ? '#1e293b' : '#e2e8f0';
+
+        if (wybranaDataFiltr) {
+            let kluczWybrany = "mitel_stats_" + wybranaDataFiltr;
+            daneDoWyswietlenia = archiwum[kluczWybrany] || (kluczWybrany === KLUCZ_DNIA ? daneDzis : { razem: 0, ber: 0, powroty: 0, modele: {} });
+            naglowekOkresu = `Dzień: ${wybranaDataFiltr}`;
+        }
+
+        const aktualnyCel = pobierzCelDzienny();
+        const czysteGlobalne = (daneDoWyswietlenia.razem - daneDoWyswietlenia.ber) < 0 ? 0 : (daneDoWyswietlenia.razem - daneDoWyswietlenia.ber);
+        const statusySumaZgłoszeń = czysteGlobalne + daneDoWyswietlenia.ber;
+
+        const pCzyste = statusySumaZgłoszeń > 0 ? Math.round((czysteGlobalne / statusySumaZgłoszeń) * 100) : 0;
+        const pBer = statusySumaZgłoszeń > 0 ? Math.round((daneDoWyswietlenia.ber / statusySumaZgłoszeń) * 100) : 0;
+
+        let wykresKolowyStyle = `background: ${koldysk};`;
+        if(statusySumaZgłoszeń > 0) {
+            wykresKolowyStyle = `background: conic-gradient(#4ade80 0% ${pCzyste}%, #f87171 ${pCzyste}% 100%);`;
+        }
+
+        const tStats = obliczStatystykiCzasu();
+
+        let htmlPaceInsights = '';
+        if (czyPokazacCel && !wybranaDataFiltr) {
+            htmlPaceInsights = `
+                <div class="themed-subcard" style="padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; border-radius: 8px;">
+                    <div><span class="text-muted">Status tempa:</span><br><strong style="color:#38bdf8;">${tStats.statusCzasu}</strong></div>
+                    <div><span class="text-muted">Estymowana godzina celu:</span><br><strong style="color:#4ade80;">${tStats.godzinaSukcesu}</strong></div>
+                </div>
+            `;
+        }
+
+        let htmlKalendarz = '';
+        if (liczbaDniKalendarza > 0) {
+            let teraz = new Date();
+            let komorkiHtml = [];
+            const jestRozwiniety = pobierzCzyKalendarzRozwiniety();
+
+            for (let i = liczbaDniKalendarza - 1; i >= 0; i--) {
+                let d = new Date(teraz.getTime() - i * 24 * 60 * 60 * 1000);
+                let dStr = d.toISOString().split('T')[0];
+                let dKlucz = "mitel_stats_" + dStr;
+                let dData = archiwum[dKlucz] || (dKlucz === KLUCZ_DNIA ? daneDzis : null);
+
+                let sztuk = dData ? dData.razem : 0;
+                let bery = dData ? dData.ber : 0;
+                let czysteDnia = (sztuk - bery) < 0 ? 0 : (sztuk - bery);
+
+                let bgKomp = isDark ? '#1e293b' : '#e2e8f0';
+                let kolorTekst = 'var(--text-main)';
+                if (sztuk > 0) {
+                    kolorTekst = '#000000';
+                    if (sztuk < 15) bgKomp = '#bbf7d0';
+                    else if (sztuk < 32) bgKomp = '#4ade80';
+                    else bgKomp = '#22c55e';
+                }
+
+                let aktywneZaznaczenie = (wybranaDataFiltr === dStr) ? 'border: 2px solid #0284c7 !important; transform: scale(1.05);' : '';
+
+                komorkiHtml.push(`
+                    <div class="hud-cal-cell" data-date="${dStr}" style="background: ${bgKomp}; color: ${kolorTekst}; ${aktywneZaznaczenie}">
+                        ${d.getDate()}
+                        <div class="tooltip">
+                            <strong>${dStr}</strong><br>
+                            Suma: ${sztuk} szt.<br>
+                            Czyste: ${czysteDnia} | BER: ${bery}
+                        </div>
                     </div>
-                    <div style="height:1px; background:rgba(128,128,128,0.2); margin:4px 0;"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong>📋 Log i historia napraw (Dzisiaj)</strong>
-                        <input type="text" id="mitel-sn-search-input" placeholder="Szukaj po SN / Modelu..." style="width:160px; padding:4px 8px; font-size:10px; border-radius:4px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main);">
+                `);
+            }
+
+            htmlKalendarz = `
+                <div class="themed-dark-bg" style="border-radius: 8px; padding: 6px 10px; margin-bottom: 4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:bold;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span>📅 Kalendarz (${liczbaDniKalendarza} dni)</span>
+                            <button id="hud-cal-toggle-view-btn" style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid #0284c7; padding:1px 6px; font-size:9px; border-radius:4px; cursor:pointer;">
+                                ${jestRozwiniety ? '[Zwiń]' : '[Rozwiń]'}
+                            </button>
+                        </div>
+                        ${wybranaDataFiltr ? `<button id="hud-cal-reset-btn" style="background:#0284c7; color:white; border:none; padding:2px 6px; font-size:9px; border-radius:4px; cursor:pointer;">Pokaż całość</button>` : ''}
                     </div>
-                    <div style="max-height:160px; overflow-y:auto; border:1px solid var(--border-card); border-radius:6px; background: var(--bg-card) !important;">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:10px; background: var(--bg-card) !important; color: var(--text-main) !important;">
-                            <thead class="themed-dark-bg" style="position:sticky; top:0; font-weight:bold; background: var(--bg-darker) !important;">
-                                <tr>
-                                    <th style="padding:6px; border-bottom:1px solid var(--border-card);">Czas</th>
-                                    <th style="padding:6px; border-bottom:1px solid var(--border-card);">Typ</th>
-                                    <th style="padding:6px; border-bottom:1px solid var(--border-card);">Model</th>
-                                    <th style="padding:6px; border-bottom:1px solid var(--border-card);">Numer Seryjny</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mitel-repair-table-body" style="background: var(--bg-card) !important;">
-                                ${renderujWierszeNapraw()}
-                            </tbody>
-                        </table>
+                    <div class="hud-cal-grid" id="hud-cal-grid-wrapper" style="display: ${jestRozwiniety ? 'grid' : 'none'};">
+                        ${komorkiHtml.join('')}
                     </div>
                 </div>
             `;
         }
 
-        function renderujWierszeNapraw(filtr = '') {
-            if (!daneDzis.listaNapraw || daneDzis.listaNapraw.length === 0) {
-                return `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:10px; background: var(--bg-card) !important;">Brak wpisów w historii na dziś.</td></tr>`;
+        let katStat = {};
+        let sumaZrobionychModeli = 0;
+        if (daneDoWyswietlenia.modele) {
+            for (let m in daneDoWyswietlenia.modele) {
+                let kName = pobierzKategorieDlaModelu(m);
+                if (!katStat[kName]) katStat[kName] = 0;
+                katStat[kName] += (daneDoWyswietlenia.modele[m].razem || 0);
+                sumaZrobionychModeli += (daneDoWyswietlenia.modele[m].razem || 0);
             }
-            let f = filtr.toUpperCase();
-            let tab = daneDzis.listaNapraw.filter(x => x.model.toUpperCase().includes(f) || x.sn.toUpperCase().includes(f) || x.typ.toUpperCase().includes(f));
-            if (tab.length === 0) {
-                return `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:10px; background: var(--bg-card) !important;">Brak wyników spełniających kryteria.</td></tr>`;
-            }
-            return tab.map(x => {
-                let cTyp = '#4ade80';
-                if(x.typ === 'BER') cTyp = '#f87171';
-                if(x.typ === 'QC') cTyp = '#818cf8';
-                return `
-                    <tr style="border-bottom:1px solid var(--border-card); background: var(--bg-card) !important; color: var(--text-main) !important;">
-                        <td style="padding:6px; font-family:monospace; opacity:0.8; color: var(--text-main) !important;">${x.czas}</td>
-                        <td style="padding:6px; font-weight:bold; color:${cTyp} !important;">${x.typ}</td>
-                        <td style="padding:6px; font-weight:600; color: var(--text-main) !important;">${x.model}</td>
-                        <td style="padding:6px; font-family:monospace; display:flex; justify-content:space-between; align-items:center; gap:4px; color: var(--text-main) !important;">
-                            <span>${x.sn}</span>
-                            ${x.sn !== 'Brak SN' && x.sn !== 'Z rejestru' ? `<button class="hud-copy-trigger-btn" data-sn="${x.sn}" style="background:rgba(128,128,128,0.15); border:1px solid var(--border); color:var(--text-main) !important; font-size:8px; padding:1px 4px; border-radius:3px; cursor:pointer;">📋 Kopiuj</button>` : ''}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
         }
 
-        function generujHtmlKarty(daneOkresowe, tytulOkresu, czyPokazacCel = false, liczbaDniKalendarza = 0) {
-            let daneDoWyswietlenia = daneOkresowe;
-            let naglowekOkresu = tytulOkresu;
+        let htmlWykresKategorii = `
+            <div class="themed-dark-bg" style="border-radius: 8px; padding: 10px;">
+                <strong style="font-size:11px;" class="text-muted">📈 Wykres efektywności według typów urządzeń:</strong>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:5px;">
+        `;
 
-            const isDark = pobierzMotyw() === 'dark';
-            const koldysk = isDark ? '#1e293b' : '#e2e8f0';
-
-            if (wybranaDataFiltr) {
-                let kluczWybrany = "mitel_stats_" + wybranaDataFiltr;
-                daneDoWyswietlenia = archiwum[kluczWybrany] || (kluczWybrany === KLUCZ_DNIA ? daneDzis : { razem: 0, ber: 0, powroty: 0, modele: {} });
-                naglowekOkresu = `Dzień: ${wybranaDataFiltr}`;
-            }
-
-            const aktualnyCel = pobierzCelDzienny();
-            const czysteGlobalne = (daneDoWyswietlenia.razem - daneDoWyswietlenia.ber) < 0 ? 0 : (daneDoWyswietlenia.razem - daneDoWyswietlenia.ber);
-            const statusySumaZgłoszeń = czysteGlobalne + daneDoWyswietlenia.ber;
-
-            const pCzyste = statusySumaZgłoszeń > 0 ? Math.round((czysteGlobalne / statusySumaZgłoszeń) * 100) : 0;
-            const pBer = statusySumaZgłoszeń > 0 ? Math.round((daneDoWyswietlenia.ber / statusySumaZgłoszeń) * 100) : 0;
-
-            let wykresKolowyStyle = `background: ${koldysk};`;
-            if(statusySumaZgłoszeń > 0) {
-                wykresKolowyStyle = `background: conic-gradient(#4ade80 0% ${pCzyste}%, #f87171 ${pCzyste}% 100%);`;
-            }
-
-            const tStats = obliczStatystykiCzasu();
-
-            let htmlPaceInsights = '';
-            if (czyPokazacCel && !wybranaDataFiltr) {
-                htmlPaceInsights = `
-                    <div class="themed-subcard" style="padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; border-radius: 8px;">
-                        <div><span class="text-muted">Status tempa:</span><br><strong style="color:#38bdf8;">${tStats.statusCzasu}</strong></div>
-                        <div><span class="text-muted">Estymowana godzina celu:</span><br><strong style="color:#4ade80;">${tStats.godzinaSukcesu}</strong></div>
-                    </div>
-                `;
-            }
-
-            let htmlKalendarz = '';
-            if (liczbaDniKalendarza > 0) {
-                let teraz = new Date();
-                let komorkiHtml = [];
-                const jestRozwiniety = pobierzCzyKalendarzRozwiniety();
-
-                for (let i = liczbaDniKalendarza - 1; i >= 0; i--) {
-                    let d = new Date(teraz.getTime() - i * 24 * 60 * 60 * 1000);
-                    let dStr = d.toISOString().split('T')[0];
-                    let dKlucz = "mitel_stats_" + dStr;
-                    let dData = archiwum[dKlucz] || (dKlucz === KLUCZ_DNIA ? daneDzis : null);
-
-                    let sztuk = dData ? dData.razem : 0;
-                    let bery = dData ? dData.ber : 0;
-                    let czysteDnia = (sztuk - bery) < 0 ? 0 : (sztuk - bery);
-
-                    let bgKomp = isDark ? '#1e293b' : '#e2e8f0';
-                    let kolorTekst = 'var(--text-main)';
-                    if (sztuk > 0) {
-                        kolorTekst = '#000000';
-                        if (sztuk < 15) bgKomp = '#bbf7d0';
-                        else if (sztuk < 32) bgKomp = '#4ade80';
-                        else bgKomp = '#22c55e';
-                    }
-
-                    let aktywneZaznaczenie = (wybranaDataFiltr === dStr) ? 'border: 2px solid #0284c7 !important; transform: scale(1.05);' : '';
-
-                    komorkiHtml.push(`
-                        <div class="hud-cal-cell" data-date="${dStr}" style="background: ${bgKomp}; color: ${kolorTekst}; ${aktywneZaznaczenie}">
-                            ${d.getDate()}
-                            <div class="tooltip">
-                                <strong>${dStr}</strong><br>
-                                Suma: ${sztuk} szt.<br>
-                                Czyste: ${czysteDnia} | BER: ${bery}
+        if (sumaZrobionychModeli === 0) {
+            htmlWykresKategorii += `<div style="color:#64748b; text-align:center; font-size:11px;">Brak danych urządzeń.</div>`;
+        } else {
+            const koloryKat = {
+                "Urządzenia przewodowe": "#38bdf8", "Urządzenia DECT": "#eab308",
+                "Urządzenia RFP": "#c084fc", "Urządzenia Unify": "#f472b6", "Inne / Nieznane": "#64748b"
+            };
+            for (let kat in katStat) {
+                if (katStat[kat] > 0) {
+                    let proc = Math.round((katStat[kat] / sumaZrobionychModeli) * 100);
+                    let kolor = koloryKat[kat] || "#64748b";
+                    htmlWykresKategorii += `
+                        <div style="font-size:11px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px; font-weight:600;">
+                                <span>• ${kat}</span><span>${katStat[kat]} szt. (${proc}%)</span>
+                            </div>
+                            <div style="width:100%; background:${isDark?'#1e293b':'#e2e8f0'}; height:5px; border-radius:3px; overflow:hidden;">
+                                <div style="width:${proc}%; background:${kolor}; height:100%;"></div>
                             </div>
                         </div>
-                    `);
-                }
-
-                htmlKalendarz = `
-                    <div class="themed-dark-bg" style="border-radius: 8px; padding: 6px 10px; margin-bottom: 4px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:bold;">
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <span>📅 Kalendarz (${liczbaDniKalendarza} dni)</span>
-                                <button id="hud-cal-toggle-view-btn" style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid #0284c7; padding:1px 6px; font-size:9px; border-radius:4px; cursor:pointer;">
-                                    ${jestRozwiniety ? '[Zwiń]' : '[Rozwiń]'}
-                                </button>
-                            </div>
-                            ${wybranaDataFiltr ? `<button id="hud-cal-reset-btn" style="background:#0284c7; color:white; border:none; padding:2px 6px; font-size:9px; border-radius:4px; cursor:pointer;">Pokaż całość</button>` : ''}
-                        </div>
-                        <div class="hud-cal-grid" id="hud-cal-grid-wrapper" style="display: ${jestRozwiniety ? 'grid' : 'none'};">
-                            ${komorkiHtml.join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            let katStat = {};
-            let sumaZrobionychModeli = 0;
-            if (daneDoWyswietlenia.modele) {
-                for (let m in daneDoWyswietlenia.modele) {
-                    let kName = pobierzKategorieDlaModelu(m);
-                    if (!katStat[kName]) katStat[kName] = 0;
-                    katStat[kName] += (daneDoWyswietlenia.modele[m].razem || 0);
-                    sumaZrobionychModeli += (daneDoWyswietlenia.modele[m].razem || 0);
+                    `;
                 }
             }
+        }
+        htmlWykresKategorii += `</div></div>`;
 
-            let htmlWykresKategorii = `
-                <div class="themed-dark-bg" style="border-radius: 8px; padding: 10px;">
-                    <strong style="font-size:11px;" class="text-muted">📈 Wykres efektywności według typów urządzeń:</strong>
-                    <div style="display:flex; flex-direction:column; gap:6px; margin-top:5px;">
-            `;
-
-            if (sumaZrobionychModeli === 0) {
-                htmlWykresKategorii += `<div style="color:#64748b; text-align:center; font-size:11px;">Brak danych urządzeń.</div>`;
-            } else {
-                const koloryKat = {
-                    "Urządzenia przewodowe": "#38bdf8", "Urządzenia DECT": "#eab308",
-                    "Urządzenia RFP": "#c084fc", "Urządzenia Unify": "#f472b6", "Inne / Nieznane": "#64748b"
-                };
-                for (let kat in katStat) {
-                    if (katStat[kat] > 0) {
-                        let proc = Math.round((katStat[kat] / sumaZrobionychModeli) * 100);
-                        let kolor = koloryKat[kat] || "#64748b";
-                        htmlWykresKategorii += `
-                            <div style="font-size:11px;">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:2px; font-weight:600;">
-                                    <span>• ${kat}</span><span>${katStat[kat]} szt. (${proc}%)</span>
-                                </div>
-                                <div style="width:100%; background:${isDark?'#1e293b':'#e2e8f0'}; height:5px; border-radius:3px; overflow:hidden;">
-                                    <div style="width:${proc}%; background:${kolor}; height:100%;"></div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            }
-            htmlWykresKategorii += `</div></div>`;
-
-            let htmlCelDzienny = '';
-            if (czyPokazacCel || wybranaDataFiltr) {
-                const procCelu = Math.min(Math.round((czysteGlobalne / aktualnyCel) * 100), 100);
-                htmlCelDzienny = `
-                    <div class="themed-dark-bg" style="border-radius: 8px; padding: 8px; margin-bottom: 4px;">
-                        <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; margin-bottom:4px;">
-                            <span>🎯 Realizacja normy czystych napraw (Cel: ${aktualnyCel} szt.)</span>
-                            <span style="color:#22c55e;">${czysteGlobalne} / ${aktualnyCel} szt. (${procCelu}%)</span>
-                        </div>
-                        <div style="width:100%; background:${isDark?'#1e293b':'#e2e8f0'}; height:8px; border-radius:4px; overflow:hidden; border:1px solid ${isDark?'#334155':'#slate-700'};">
-                            <div style="width:${procCelu}%; background:${procCelu === 100 ? '#22c55e' : '#10b981'}; height:100%;"></div>
-                        </div>
+        let htmlCelDzienny = '';
+        if (czyPokazacCel || wybranaDataFiltr) {
+            const procCelu = Math.min(Math.round((czysteGlobalne / aktualnyCel) * 100), 100);
+            htmlCelDzienny = `
+                <div class="themed-dark-bg" style="border-radius: 8px; padding: 8px; margin-bottom: 4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; margin-bottom:4px;">
+                        <span>🎯 Realizacja normy czystych napraw (Cel: ${aktualnyCel} szt.)</span>
+                        <span style="color:#22c55e;">${czysteGlobalne} / ${aktualnyCel} szt. (${procCelu}%)</span>
                     </div>
-                `;
-            }
-
-            let htmlModele = '';
-            if (daneDoWyswietlenia.modele && Object.keys(daneDoWyswietlenia.modele).length > 0) {
-                htmlModele = `<div style="margin-top: 4px; padding-top: 6px; border-top: 1px dashed ${isDark?'#334155':'#e2e8f0'}; font-size: 11px;">
-                                <strong class="text-muted" style="display:block; margin-bottom:6px;">📱 Modele szczegółowo w tym okresie:</strong>
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; max-height:140px; overflow-y:auto; padding-right:5px;">`;
-                for (const mod in daneDoWyswietlenia.modele) {
-                    const mInfo = daneDoWyswietlenia.modele[mod];
-                    const mTotal = mInfo.razem || 0;
-                    const mPowroty = mInfo.powroty || 0; // Zwroty z bazy
-                    const mQcStatus = mInfo.qc || 0;     // Nowe wpisy "Czeka na QC"
-
-                    if (mTotal > 0 || mPowroty > 0 || mQcStatus > 0) {
-                        const mBer = mInfo.ber || 0;
-
-                        // Czyste to suma minus BER oraz minus telefony, które poszły na QC
-                        let mCzyste = mTotal - mBer - mQcStatus;
-                        if (mCzyste < 0) mCzyste = 0;
-
-                        // Wyliczanie proporcji paska dla 3 stanów: Czyste, QC (Status), BER
-                        const sumaPaska = mCzyste + mBer + mQcStatus;
-                        const pMczyste = sumaPaska > 0 ? Math.round((mCzyste / sumaPaska) * 100) : 0;
-                        const pMqc = sumaPaska > 0 ? Math.round((mQcStatus / sumaPaska) * 100) : 0;
-                        const pMber = sumaPaska > 0 ? Math.round((mBer / sumaPaska) * 100) : 0;
-
-                        // Sumaryczna wartość QC do wyświetlenia (Czeka na QC + ewentualne stare Powroty)
-                        const lacznieQc = mQcStatus + mPowroty;
-
-                        htmlModele += `
-                            <div class="themed-dark-bg" style="padding:6px 8px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="font-weight:700; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;">${mod}</span>
-                                    <span style="background:${isDark?'#1e293b':'#e2e8f0'}; color:#38bdf8; font-size:9px; padding:1px 5px; border-radius:4px; font-weight:bold; border:1px solid ${isDark?'#334155':'#cbd5e1'};">Suma: ${mTotal}</span>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; font-size:9px; opacity:0.8; line-height:1;">
-                                    <span>🟢 Czyste: ${mCzyste}</span><span>🔴 BER: ${mBer}</span><span style="color:#818cf8; font-weight:bold;">🔄 QC: ${lacznieQc}</span>
-                                </div>
-                                ${sumaPaska > 0 ? `
-                                <div style="width:100%; height:4px; background:${isDark?'#334155':'#e2e8f0'}; border-radius:2px; overflow:hidden; display:flex;">
-                                    <div style="width:${pMczyste}%; background:#4ade80; height:100%;" title="Czyste: ${pMczyste}%"></div>
-                                    <div style="width:${pMqc}%; background:#818cf8; height:100%;" title="QC: ${pMqc}%"></div>
-                                    <div style="width:${pMber}%; background:#f87171; height:100%;" title="BER: ${pMber}%"></div>
-                                </div>` : '<div style="height:4px;"></div>'}
-                            </div>`;
-                    }
-                }
-                htmlModele += `</div></div>`;
-            }
-
-            return `
-                ${htmlCelDzienny}
-                ${htmlKalendarz}
-                <div class="themed-card" style="border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; border-bottom:1px solid ${isDark?'#334155':'#e2e8f0'}; padding-bottom:6px; font-size:12px;">
-                        <span>📊 Raport: ${naglowekOkresu}</span>
-                        <span style="background:#0284c7; color:white; padding:1px 8px; border-radius:10px; font-size:10px;">Suma napraw: ${daneDoWyswietlenia.razem} szt.</span>
+                    <div style="width:100%; background:${isDark?'#1e293b':'#e2e8f0'}; height:8px; border-radius:4px; overflow:hidden; border:1px solid ${isDark?'#334155':'#slate-700'};">
+                        <div style="width:${procCelu}%; background:${procCelu === 100 ? '#22c55e' : '#10b981'}; height:100%;"></div>
                     </div>
-
-                    <div style="display: flex; align-items: center; gap: 20px; margin-top: 2px;">
-                        <div style="width: 74px; height: 74px; border-radius: 50%; ${wykresKolowyStyle} box-shadow: 0 4px 10px rgba(0,0,0,0.15); flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center;">
-                            <div style="width: 44px; height: 44px; background: ${isDark?'#1e293b':'#ffffff'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border:1px solid ${isDark?'#334155':'#cbd5e1'};">${daneDoWyswietlenia.razem}</div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 4px; flex-grow: 1; font-size: 11px;">
-                            <div style="display:flex; justify-content:space-between; background:rgba(74,222,128,0.06); padding:4px 8px; border-radius:6px; border-left:4px solid #4ade80; border:1px solid rgba(74,222,128,0.12); border-left-width:4px;">
-                                <span style="color:#22c55e; font-weight:600;">✅ Czyste:</span><span><strong>${czysteGlobalne}</strong> (${pCzyste}%)</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; background:rgba(248,113,113,0.06); padding:4px 8px; border-radius:6px; border-left:4px solid #f87171; border:1px solid rgba(248,113,113,0.12); border-left-width:4px;">
-                                <span style="color:#f87171; font-weight:600;">🛠️ Spisane BER:</span><span><strong>${daneDoWyswietlenia.ber}</strong> (${pBer}%)</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; background:rgba(129,140,248,0.04); padding:4px 8px; border-radius:6px; border-left:4px solid #818cf8; border:1px solid rgba(129,140,248,0.08); border-left-width:4px; opacity:0.85;">
-                                <span style="color:#818cf8; font-weight:600;">ℹ️ Powroty QC (Info):</span><span><strong style="color:#818cf8;">${daneDoWyswietlenia.powroty} szt.</strong></span>
-                            </div>
-                        </div>
-                    </div>
-                    ${htmlPaceInsights}
-                    ${htmlWykresKategorii}
-                    ${htmlModele}
                 </div>
             `;
         }
 
+        let htmlModele = '';
+        if (daneDoWyswietlenia.modele && Object.keys(daneDoWyswietlenia.modele).length > 0) {
+            htmlModele = `<div style="margin-top: 4px; padding-top: 6px; border-top: 1px dashed ${isDark?'#334155':'#e2e8f0'}; font-size: 11px;">
+                            <strong class="text-muted" style="display:block; margin-bottom:6px;">📱 Modele szczegółowo w tym okresie:</strong>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; max-height:140px; overflow-y:auto; padding-right:5px;">`;
+            for (const mod in daneDoWyswietlenia.modele) {
+                const mInfo = daneDoWyswietlenia.modele[mod];
+                const mTotal = mInfo.razem || 0;
+                const mPowroty = mInfo.powroty || 0;
+                const mQcStatus = mInfo.qc || 0;
+
+                if (mTotal > 0 || mPowroty > 0 || mQcStatus > 0) {
+                    const mBer = mInfo.ber || 0;
+
+                    let mCzyste = mTotal - mBer - mQcStatus;
+                    if (mCzyste < 0) mCzyste = 0;
+
+                    const sumaPaska = mCzyste + mBer + mQcStatus;
+                    const pMczyste = sumaPaska > 0 ? Math.round((mCzyste / sumaPaska) * 100) : 0;
+                    const pMqc = sumaPaska > 0 ? Math.round((mQcStatus / sumaPaska) * 100) : 0;
+                    const pMber = sumaPaska > 0 ? Math.round((mBer / sumaPaska) * 100) : 0;
+
+                    const lacznieQc = mQcStatus + mPowroty;
+
+                    htmlModele += `
+                        <div class="themed-dark-bg" style="padding:6px 8px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-weight:700; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;">${mod}</span>
+                                <span style="background:${isDark?'#1e293b':'#e2e8f0'}; color:#38bdf8; font-size:9px; padding:1px 5px; border-radius:4px; font-weight:bold; border:1px solid ${isDark?'#334155':'#cbd5e1'};">Suma: ${mTotal}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:9px; opacity:0.8; line-height:1;">
+                                <span>🟢 Czyste: ${mCzyste}</span><span>🔴 BER: ${mBer}</span><span style="color:#818cf8; font-weight:bold;">🔄 QC: ${lacznieQc}</span>
+                            </div>
+                            ${sumaPaska > 0 ? `
+                            <div style="width:100%; height:4px; background:${isDark?'#334155':'#e2e8f0'}; border-radius:2px; overflow:hidden; display:flex;">
+                                <div style="width:${pMczyste}%; background:#4ade80; height:100%;" title="Czyste: ${pMczyste}%"></div>
+                                <div style="width:${pMqc}%; background:#818cf8; height:100%;" title="QC: ${pMqc}%"></div>
+                                <div style="width:${pMber}%; background:#f87171; height:100%;" title="BER: ${pMber}%"></div>
+                            </div>` : '<div style="height:4px;"></div>'}
+                        </div>`;
+                }
+            }
+            htmlModele += `</div></div>`;
+        }
+
+        return `
+            ${htmlCelDzienny}
+            ${htmlKalendarz}
+            <div class="themed-card" style="border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; border-bottom:1px solid ${isDark?'#334155':'#e2e8f0'}; padding-bottom:6px; font-size:12px;">
+                    <span>📊 Raport: ${naglowekOkresu}</span>
+                    <span style="background:#0284c7; color:white; padding:1px 8px; border-radius:10px; font-size:10px;">Suma napraw: ${daneDoWyswietlenia.razem} szt.</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 20px; margin-top: 2px;">
+                    <div style="width: 74px; height: 74px; border-radius: 50%; ${wykresKolowyStyle} box-shadow: 0 4px 10px rgba(0,0,0,0.15); flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 44px; height: 44px; background: ${isDark?'#1e293b':'#ffffff'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border:1px solid ${isDark?'#334155':'#cbd5e1'};">${daneDoWyswietlenia.razem}</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 4px; flex-grow: 1; font-size: 11px;">
+                        <div style="display:flex; justify-content:space-between; background:rgba(74,222,128,0.06); padding:4px 8px; border-radius:6px; border-left:4px solid #4ade80; border:1px solid rgba(74,222,128,0.12); border-left-width:4px;">
+                            <span style="color:#22c55e; font-weight:600;">✅ Czyste:</span><span><strong>${czysteGlobalne}</strong> (${pCzyste}%)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; background:rgba(248,113,113,0.06); padding:4px 8px; border-radius:6px; border-left:4px solid #f87171; border:1px solid rgba(248,113,113,0.12); border-left-width:4px;">
+                            <span style="color:#f87171; font-weight:600;">🛠️ Spisane BER:</span><span><strong>${daneDoWyswietlenia.ber}</strong> (${pBer}%)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; background:rgba(129,140,248,0.04); padding:4px 8px; border-radius:6px; border-left:4px solid #818cf8; border:1px solid rgba(129,140,248,0.08); border-left-width:4px; opacity:0.85;">
+                            <span style="color:#818cf8; font-weight:600;">ℹ️ Powroty QC (Info):</span><span><strong style="color:#818cf8;">${daneDoWyswietlenia.powroty} szt.</strong></span>
+                        </div>
+                    </div>
+                </div>
+                ${htmlPaceInsights}
+                ${htmlWykresKategorii}
+                ${htmlModele}
+            </div>
+        `;
+    }
         const overlay = document.createElement('div');
         overlay.id = 'mitel-stats-overlay';
 
