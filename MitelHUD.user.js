@@ -553,6 +553,11 @@
 
         let wybranaDataFiltr = null;
 
+        document.getElementById('btn-manual-update').addEventListener('click', () => {
+    // To otwiera Twój plik w nowej karcie, wymuszając interakcję Tampermonkey
+       window.location.href = 'https://raw.githubusercontent.com/KapiJoker/SBETEST/main/MitelHUD.user.js';
+       });
+
         function generujHtmlAutomatyzacji() {
             let skrot = pobierzKlawiszSkrotu();
             return `
@@ -912,6 +917,7 @@
                 <div class="top-bar" style="padding: 8px 16px; display:flex; justify-content:space-between; align-items:center; font-size:10px;">
                     <button id="btn-reset-db" style="background: transparent; color: #f87171; border: 1px solid #f87171; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">🧹 Resetuj bazę danych</button>
                     <strong class="text-muted">v24.07 Placement Edition</strong>
+                    <button id="btn-manual-update" style="background: transparent; color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer; margin-right: 10px;">🔄 Aktualizuj ręcznie</button>
                 </div>
             </div>
         `;
