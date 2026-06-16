@@ -111,6 +111,26 @@
             label: "Lutowanie L231",
             status: "CZEKA NA LUTOWANIE",
             comment: "L231"
+        },
+        {
+            label: "Lutowanie U100",
+            status: "CZEKA NA LUTOWANIE",
+            comment: "U100"
+        },
+        {
+            label: "Lutowanie USB",
+            status: "CZEKA NA LUTOWANIE",
+            comment: "Wymiana USB"
+        },
+        {
+            label: "Lutowanie Mikrofon",
+            status: "CZEKA NA LUTOWANIE",
+            comment: "Wymiana Mikrofonu"
+        },
+        {
+            label: "Lutowanie HF",
+            status: "CZEKA NA LUTOWANIE",
+            comment: "Wymiana złącza audio (HF)"
         }
     ];
 
