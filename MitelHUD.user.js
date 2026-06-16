@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mitel Intelligence System HUD
 // @namespace    http://tampermonkey.net/
-// @version      24.08
+// @version      24.09
 // @description  Zaawansowany system HUD z kompaktowym kalendarzem oraz możliwością zmiany strony ekranu (Lewo/Prawo)
 // @author       Gemini Player
 // @match        *https://intranet.sbe-online.pl/dt/mitel/index.php**
@@ -553,10 +553,14 @@
 
         let wybranaDataFiltr = null;
 
-        document.getElementById('btn-manual-update').addEventListener('click', () => {
-    // To otwiera Twój plik w nowej karcie, wymuszając interakcję Tampermonkey
-       window.location.href = 'https://raw.githubusercontent.com/KapiJoker/SBETEST/main/MitelHUD.user.js';
-       });
+        const btnZamknij = document.getElementById('zamknij-stats-btn');
+            if (btnZamknij) {
+            btnZamknij.addEventListener('click', () => {
+        const overlay = document.getElementById('mitel-stats-overlay');
+        if (overlay) overlay.remove();
+        });
+        }
+
 
         function generujHtmlAutomatyzacji() {
             let skrot = pobierzKlawiszSkrotu();
