@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Menu z Kodami QR & Barcode
 // @namespace    http://tampermonkey.net/
-// @version      25.4
-// @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych.
+// @version      25.5
+// @description  Aktualizacja szybkich statusów (BER, RJ-45, QC) dla stacjonarnych i komórkowych z zarządzaniem widocznością.
 // @author       Kacper & AI
 // @match        https://intranet.sbe-online.pl/dt/mitel/index.php*
 // @grant        GM_xmlhttpRequest
@@ -22,116 +22,31 @@
     // 1. SZYBKIE MENU DLA STACJONARNYCH (SEKCJA "TELEFONY")
     // =========================================================================
     const QUICK_STATUSES_STACJONARNE = [
-        {
-            label: "CZEKA NA QC",
-            status: "CZEKA NA QC",
-            comment: "Odnowienie Kompletu"
-        },
-        {
-            label: "Usunięto nieprawidłowości",
-            status: "CZEKA NA QC",
-            comment: "Usunięto nieprawidłowości"
-        },
-        {
-            label: "BER (Zalanie)",
-            status: "BER",
-            berIssue: "Ślady cieczy (LD)",
-            comment: "Ślady cieczy na płycie"
-        },
-        {
-            label: "BER (RJ-45)",
-            status: "BER",
-            berIssue: "Uszkodzenie mechaniczne (MD)",
-            comment: "Urwany RJ-45"
-        },
-        {
-            label: "BER (BAZA)",
-            status: "BER",
-            berIssue: "Ciągły błąd DHCP",
-            comment: "Błąd DHCP nie łączy się z Baza"
-        },
-        {
-            label: "BER (ON/OFF)",
-            status: "BER",
-            berIssue: "Nie włącza się",
-            comment: "Nie włącza się"
-        },
-        {
-            label: "Lutowanie Głośnika",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "Wymiana głośnika"
-        },
-        {
-            label: "Lutowanie USB",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "Wymiana USB"
-        },
+        { label: "CZEKA NA QC", status: "CZEKA NA QC", comment: "Odnowienie Kompletu" },
+        { label: "Usunięto nieprawidłowości", status: "CZEKA NA QC", comment: "Usunięto nieprawidłowości" },
+        { label: "BER (Zalanie)", status: "BER", berIssue: "Ślady cieczy (LD)", comment: "Ślady cieczy na płycie" },
+        { label: "BER (RJ-45)", status: "BER", berIssue: "Uszkodzenie mechaniczne (MD)", comment: "Urwany RJ-45" },
+        { label: "BER (BAZA)", status: "BER", berIssue: "Ciągły błąd DHCP", comment: "Błąd DHCP nie łączy się z Baza" },
+        { label: "BER (ON/OFF)", status: "BER", berIssue: "Nie włącza się", comment: "Nie włącza się" },
+        { label: "Lutowanie Głośnika", status: "CZEKA NA LUTOWANIE", comment: "Wymiana głośnika" },
+        { label: "Lutowanie USB", status: "CZEKA NA LUTOWANIE", comment: "Wymiana USB" },
     ];
 
     // =========================================================================
     // 2. SZYBKIE MENU DLA KOMÓRKOWYCH (SEKCJA "TELEFONY")
     // =========================================================================
     const QUICK_STATUSES_KOMORKOWE = [
-        {
-            label: "CZEKA NA QC",
-            status: "CZEKA NA QC",
-            comment: "Odnowienie Kompletu"
-        },
-        {
-            label: "BER (Zalanie)",
-            status: "BER",
-            berIssue: "Ślady cieczy (LD)",
-            comment: "Ślady cieczy na płycie"
-        },
-        {
-            label: "BER (Dioda)",
-            status: "BER",
-            berIssue: "U100",
-            comment: "Świeci / Miga Dioda"
-        },
-        {
-            label: "BER (USB)",
-            status: "BER",
-            berIssue: "Port USB",
-            comment: "Nie wykrywa USB"
-        },
-        {
-            label: "BER (U100)",
-            status: "BER",
-            berIssue: "U100",
-            comment: "U100"
-        },
-        {
-            label: "BER (ON/OFF)",
-            status: "BER",
-            berIssue: "Nie włącza się",
-            comment: "Nie włącza się"
-        },
-        {
-            label: "Lutowanie L231",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "L231"
-        },
-        {
-            label: "Lutowanie U100",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "U100"
-        },
-        {
-            label: "Lutowanie USB",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "Wymiana USB"
-        },
-        {
-            label: "Lutowanie Mikrofon",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "Wymiana Mikrofonu"
-        },
-        {
-            label: "Lutowanie HF",
-            status: "CZEKA NA LUTOWANIE",
-            comment: "Wymiana złącza audio (HF)"
-        }
+        { label: "CZEKA NA QC", status: "CZEKA NA QC", comment: "Odnowienie Kompletu" },
+        { label: "BER (Zalanie)", status: "BER", berIssue: "Ślady cieczy (LD)", comment: "Ślady cieczy na płycie" },
+        { label: "BER (Dioda)", status: "BER", berIssue: "U100", comment: "Świeci / Miga Dioda" },
+        { label: "BER (USB)", status: "BER", berIssue: "Port USB", comment: "Nie wykrywa USB" },
+        { label: "BER (U100)", status: "BER", berIssue: "U100", comment: "U100" },
+        { label: "BER (ON/OFF)", status: "BER", berIssue: "Nie włącza się", comment: "Nie włącza się" },
+        { label: "Lutowanie L231", status: "CZEKA NA LUTOWANIE", comment: "L231" },
+        { label: "Lutowanie U100", status: "CZEKA NA LUTOWANIE", comment: "U100" },
+        { label: "Lutowanie USB", status: "CZEKA NA LUTOWANIE", comment: "Wymiana USB" },
+        { label: "Lutowanie Mikrofon", status: "CZEKA NA LUTOWANIE", comment: "Wymiana Mikrofonu" },
+        { label: "Lutowanie HF", status: "CZEKA NA LUTOWANIE", comment: "Wymiana złącza audio (HF)" }
     ];
 
     const DATABASE_URL = "https://raw.githubusercontent.com/KapiJoker/SBETEST/refs/heads/main/testqr.json";
@@ -144,22 +59,32 @@
     let customItems = JSON.parse(localStorage.getItem('qrCustomItems')) || defaultDatabase;
     let recentItems = JSON.parse(localStorage.getItem('qrRecentItems')) || [];
     let collapsedSections = JSON.parse(localStorage.getItem('qrCollapsedSections')) || {};
-    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || []; 
+    let hiddenItems = JSON.parse(localStorage.getItem('qrHiddenItems')) || [];
     let menuPosition = JSON.parse(localStorage.getItem('qrMenuPosition')) || { bottom: '20px', left: '20px', top: 'auto', right: 'auto' };
     let menuSize = JSON.parse(localStorage.getItem('qrMenuSize')) || { width: '240px', height: 'auto' };
     let themeMode = localStorage.getItem('qrThemeMode') || 'dark';
     let isCompactMode = localStorage.getItem('qrCompactMode') === 'true';
     let currentTab = localStorage.getItem('qrCurrentTab') || 'stacjonarne';
-    let codeMode = localStorage.getItem('qrCodeMode') || 'qr'; 
-    let selectedSearchIndex = -1;
+    let codeMode = localStorage.getItem('qrCodeMode') || 'qr';
     let savedVisibility = localStorage.getItem('qrMenuVisibility') || 'block';
     let savedQRValue = localStorage.getItem('qrLastSelectedValue');
+
+    function toggleVisibility(value) {
+        if (hiddenItems.includes(value)) {
+            hiddenItems = hiddenItems.filter(v => v !== value);
+        } else {
+            hiddenItems.push(value);
+        }
+        localStorage.setItem('qrHiddenItems', JSON.stringify(hiddenItems));
+        renderList();
+        renderModalContent();
+    }
 
     function setSelectValueByText(selectElement, textToFind) {
         if (!selectElement || !textToFind) return false;
         const normalizedText = textToFind.toUpperCase().trim();
         for (let i = 0; i < selectElement.options.length; i++) {
-            if (selectElement.options[i].text.toUpperCase().trim() === normalizedText || 
+            if (selectElement.options[i].text.toUpperCase().trim() === normalizedText ||
                 selectElement.options[i].value.toUpperCase().trim() === normalizedText) {
                 selectElement.selectedIndex = i;
                 selectElement.dispatchEvent(new Event('change', { bubbles: true }));
@@ -171,7 +96,6 @@
 
     function executeQuickStatus(statusConfig) {
         console.log(`[Szybki Status] Uruchamianie: ${statusConfig.label}`);
-
         const statusSelect = document.getElementById('status-select') || document.querySelector('select[name*="status"]') || document.querySelector('select');
         if (statusSelect) {
             const success = setSelectValueByText(statusSelect, statusConfig.status);
@@ -182,13 +106,11 @@
                 }, 50);
             }
         }
-
         const commentModal = document.getElementById('commentModal');
         const textarea = commentModal ? commentModal.querySelector('textarea') : document.querySelector('textarea');
         if (textarea) {
             textarea.value = statusConfig.comment;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
             setTimeout(() => {
                 const confirmBtn = document.getElementById('confirmComment') || document.querySelector('[name="confirmComment"]') || document.querySelector('.btn-confirm');
                 if (confirmBtn) {
@@ -242,7 +164,6 @@
                             localStorage.removeItem('qrCustomItems');
                             customItems = importedData.filter(item => item.value !== "PLACEHOLDER_EMPTY");
                             localStorage.setItem('qrCustomItems', JSON.stringify(customItems));
-                            
                             renderList();
                             console.log("[Baza QR] Pomyślnie nadpisano i zsynchronizowano bazę z GitHub.");
                             if (onSuccessCallback) onSuccessCallback();
@@ -336,14 +257,14 @@
     title.innerText = 'MENU ☰';
     title.style.cssText = "font-weight:700; font-size:10px; letter-spacing:0.5px; opacity:0.7;";
     titleGroup.appendChild(title);
-    
+
     const rightHeaderGroup = document.createElement('div');
     rightHeaderGroup.style.cssText = "display:flex; align-items:center; gap:6px; flex-shrink:0;";
     headerRow.appendChild(rightHeaderGroup);
 
     const compactBtn = document.createElement('button');
     compactBtn.innerText = isCompactMode ? '📏' : '🤏';
-    compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:#0d6efd; padding:2px; line-height:1;";
+    compactBtn.style.cssText = "background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; padding:2px; line-height:1;";
     rightHeaderGroup.appendChild(compactBtn);
 
     const themeBtn = document.createElement('button');
@@ -366,6 +287,9 @@
 
     function applyTheme(theme) {
         themeMode = theme; localStorage.setItem('qrThemeMode', theme);
+        const btnColor = theme === 'dark' ? '#f8f9fa' : '#212529';
+        [compactBtn, themeBtn, updateBtn].forEach(el => el.style.color = btnColor);
+
         if (theme === 'dark') {
             themeBtn.innerText = '🌙'; menu.style.backgroundColor = 'var(--qr-bg-dark)'; menu.style.color = 'var(--qr-text-dark)'; menu.style.border = '1px solid var(--qr-border-dark)';
         } else {
@@ -484,13 +408,13 @@
         btn.style.background = themeMode === 'dark' ? 'var(--qr-btn-dark)' : 'var(--qr-btn-light)';
         btn.style.color = themeMode === 'dark' ? 'var(--qr-text-dark)' : 'var(--qr-text-light)';
         btn.style.borderLeft = item.color ? `3px solid ${item.color}` : '3px solid transparent';
-        
+
         if (isTelephoneSection) {
             btn.style.borderRadius = "3px 0 0 3px";
         } else {
             btn.style.borderRadius = "3px";
         }
-        
+
         btn.onclick = (e) => { e.stopPropagation(); addToRecent(item.label, item.value, item.color, item.category); };
         btnRow.appendChild(btn);
 
@@ -515,8 +439,8 @@
                 sBtn.style.color = themeMode === 'dark' ? '#ddd' : '#333';
                 sBtn.onclick = (e) => {
                     e.stopPropagation();
-                    addToRecent(item.label, item.value, item.color, item.category); 
-                    executeQuickStatus(statusCfg); 
+                    addToRecent(item.label, item.value, item.color, item.category);
+                    executeQuickStatus(statusCfg);
                     subMenu.style.display = 'none';
                     arrowBtn.innerText = '▼';
                 };
@@ -666,6 +590,28 @@
             localStorage.setItem('qrCustomItems', JSON.stringify(customItems)); renderList(); renderModalContent();
         };
         cardRec.appendChild(saveBtn); gridForms.appendChild(cardRec);
+
+        const cardVis = document.createElement('div');
+        cardVis.style.cssText = cardStyle + " margin-top: 10px;";
+        cardVis.innerHTML = `<div style="font-size:12px; font-weight:600; margin-bottom:10px; color:#6c757d;">👁️ Krok 3: Ukrywanie elementów</div>`;
+        const visList = document.createElement('div');
+        visList.style.cssText = "max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid rgba(128,128,128,0.2); border-radius: 4px;";
+
+        customItems.forEach(item => {
+            if (item.value === "PLACEHOLDER_EMPTY") return;
+            const row = document.createElement('div');
+            const isHidden = hiddenItems.includes(item.value);
+            row.style.cssText = "display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:4px; background:rgba(0,0,0,0.05); border-radius:3px;";
+            row.innerHTML = `<span>${item.label}</span>`;
+            const toggle = document.createElement('button');
+            toggle.innerText = isHidden ? 'Pokaż' : 'Ukryj';
+            toggle.style.cssText = `cursor:pointer; border:none; border-radius:3px; padding:2px 6px; font-size:10px; ${isHidden ? 'background:#198754; color:#fff' : 'background:#dc3545; color:#fff'}`;
+            toggle.onclick = () => toggleVisibility(item.value);
+            row.appendChild(toggle);
+            visList.appendChild(row);
+        });
+        cardVis.appendChild(visList);
+        modalContainer.appendChild(cardVis);
     }
 
     manageBtn.onclick = () => { renderModalContent(); modalOverlay.style.display = 'flex'; };
