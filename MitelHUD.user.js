@@ -13,11 +13,8 @@
 // @downloadURL  https://raw.githubusercontent.com/KapiJoker/SBETEST/main/MitelHUD.user.js
 // ==/UserScript==
 
-window.MITEL_DEBUG = {
-    skanuj: skanujTabeleWPoszukiwaniuPowrotow,
-    dane: () => daneDzis,
-    testModel: wykryjModelTelefonu
-};
+(function() {
+    'use strict';
 
     // ==========================================
     // SEKCJA 1: KONFIGURACJA I STATE
@@ -1791,4 +1788,15 @@ window.MITEL_DEBUG = {
     } else {
         init();
     }
+
+    console.log("Skrypt dotarł do końca definicji funkcji.");
+
+    // Wystawienie funkcji do obiektu window
+    window.MITEL_DEBUG = {
+        skanuj: skanujTabeleWPoszukiwaniuPowrotow,
+        dane: () => daneDzis,
+        testModel: wykryjModelTelefonu,
+        odswiez: odswiezWidokHUD
+    };
+    console.log("Obiekt MITEL_DEBUG został utworzony:", window.MITEL_DEBUG);
 })();
