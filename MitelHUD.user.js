@@ -13,8 +13,11 @@
 // @downloadURL  https://raw.githubusercontent.com/KapiJoker/SBETEST/main/MitelHUD.user.js
 // ==/UserScript==
 
-(function() {
-    'use strict';
+window.MITEL_DEBUG = {
+    skanuj: skanujTabeleWPoszukiwaniuPowrotow,
+    dane: () => daneDzis,
+    testModel: wykryjModelTelefonu
+};
 
     // ==========================================
     // SEKCJA 1: KONFIGURACJA I STATE
@@ -200,44 +203,47 @@
 
     function skanujTabeleWPoszukiwaniuPowrotow() {
     let flagaZmiany = false;
-    // Skanujemy wszystkie wiersze w tabeli głównej
-    document.querySelectorAll('#general tr').forEach(row => {
-        // Znajdujemy pole select statusu w danym wierszu
-        let selectStatus = row.querySelector('.status-select');
 
-        // Sprawdzamy, czy select istnieje, czy ma wartość "POWRÓT"
-        // i czy jeszcze nie oznaczyliśmy tego wiersza jako zeskanowany
-        if (selectStatus && selectStatus.value === 'POWRÓT' && !row.dataset.mitelScanned) {
+    document.querySelectorAll('#general tr').forEach(row => {
+        let selectStatus = row.querySelector('.status-select');
+        if (!selectStatus || selectStatus.value !== 'POWRÓT') return;
+
+        let sn = row.innerText.match(/([0-9A-F]{12})|(RE[0-9]{10})/i);
+        let idWiersza = sn ? sn[0] : 'row_' + row.rowIndex;
+
+        // Jeśli już mamy ten wpis w historii – pomijamy, żeby nie dublować
+        if (daneDzis.historia && daneDzis.historia.some(wpis => wpis.sn === idWiersza)) {
+            return;
+        }
+
+        // Sprawdzamy czy wiersz nie był już zeskanowany w bieżącej sesji
+        if (!row.dataset.mitelScanned) {
             row.dataset.mitelScanned = "true";
 
-            // Zwiększamy licznik powrotów
-            daneDzis.powroty++;
-
-            // Wykrywamy model za pomocą Twojej istniejącej funkcji
             let m = wykryjModelTelefonu(row);
             if (m === "Nieznany Model") return;
 
-            // Inicjalizacja struktury modelu, jeśli jeszcze nie istnieje
+            // Inicjalizacja jeśli nie istnieje
             if (!daneDzis.modele[m]) {
                 daneDzis.modele[m] = { ber: 0, powroty: 0, razem: 0 };
             }
-            daneDzis.modele[m].powroty++;
 
-            // Wykrywanie SN (używając Twojej logiki regex)
-            let dedykowanySN = "Z rejestru";
-            const regexSN = /([0-9A-F]{12})|(RE[0-9]{10})/i;
-            let meczSN = row.innerText.match(regexSN);
-            if (meczSN) dedykowanySN = meczSN[0];
+            // Zwiększamy liczniki TYLKO RAZ
+            daneDzis.modele[m].powroty++;
+            daneDzis.powroty++;
 
             // Dodanie do historii
-            dodajWpisDoTimeline('QC', m, dedykowanySN);
+            dodajWpisDoTimeline('QC', m, idWiersza); // Używamy idWiersza zamiast "Z rejestru"
+
             flagaZmiany = true;
         }
     });
 
-    // Zapisz zmiany w localStorage, jeśli cokolwiek zostało dodane
-    if (flagaZmiany) zapiszDaneDnia(KLUCZ_DNIA, daneDzis);
+    if (flagaZmiany) {
+        zapiszDaneDnia(KLUCZ_DNIA, daneDzis);
+        odswiezWidokHUD(); // Dodajemy odświeżenie tutaj, żeby HUD zareagował od razu
     }
+}
 
     function obliczDaneOkresu(dni, archiwum) {
         let res = { razem: 0, ber: 0, powroty: 0, modele: {} };
@@ -953,12 +959,15 @@
                         let mCzyste = mTotal - mBer - mQcStatus;
                         if (mCzyste < 0) mCzyste = 0;
 
+                        const lacznieQc = mQcStatus + mPowroty;
+
                         const sumaPaska = mCzyste + mBer + mQcStatus;
                         const pMczyste = sumaPaska > 0 ? Math.round((mCzyste / sumaPaska) * 100) : 0;
-                        const pMqc = sumaPaska > 0 ? Math.round((mQcStatus / sumaPaska) * 100) : 0;
+                        const pMqc = sumaPaska > 0 ? Math.round((lacznieQc / sumaPaska) * 100) : 0;
                         const pMber = sumaPaska > 0 ? Math.round((mBer / sumaPaska) * 100) : 0;
 
-                        const lacznieQc = mQcStatus + mPowroty;
+
+
 
                         htmlModele += `
                             <div class="themed-dark-bg" style="padding:6px 8px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
