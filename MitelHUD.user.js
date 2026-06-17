@@ -80,14 +80,34 @@
         localStorage.setItem(KLUCZ_GODZIN, JSON.stringify(daneGodzinowe));
     }
 
-    function pobierzSumeDzisZHtml() {
-        const selektory = ['#total-repairs-count', '.repairs-sum-value', '#dzisiejsze-naprawy'];
-        for (let sel of selektory) {
-            const el = document.querySelector(sel);
-            if (el) {
-                let val = parseInt(el.textContent.trim(), 10);
-                if (!isNaN(val)) return val;
+   function pobierzSumeDzisZHtml() {
+        try {
+            // 1. Sprawdzamy sekcję z .user-actions na podstawie zaktualizowanego HTML
+            const actionsDiv = document.querySelector('.user-actions');
+            if (actionsDiv) {
+                // Wyciąga cały tekst (ignorując tagi HTML takie jak <strong>)
+                // i szuka wzorca "Dzisiaj: [dowolne znaki] (CYFRA)"
+                const dopasowanie = actionsDiv.textContent.match(/Dzisiaj:[^\d]*(\d+)/i);
+                if (dopasowanie && dopasowanie[1]) {
+                    const wynik = parseInt(dopasowanie[1], 10);
+                    if (!isNaN(wynik)) return wynik;
+                }
             }
+
+            // 2. Metoda zapasowa (starsze selektory, jeśli kiedyś wrócą)
+            const selektory = ['#total-repairs-count', '.repairs-sum-value', '#dzisiejsze-naprawy'];
+            for (let sel of selektory) {
+                const el = document.querySelector(sel);
+                if (el) {
+                    let dopasowanie = el.textContent.match(/(\d+)/);
+                    if (dopasowanie && dopasowanie[1]) {
+                        let wynik = parseInt(dopasowanie[1], 10);
+                        if (!isNaN(wynik)) return wynik;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Mitel HUD: Błąd odczytu sumy", err);
         }
         return null;
     }
@@ -179,29 +199,44 @@
     }
 
     function skanujTabeleWPoszukiwaniuPowrotow() {
-        let flagaZmiany = false;
-        document.querySelectorAll('table tr, .data-row').forEach(row => {
-            let txt = row.innerText.toUpperCase();
-            if ((txt.includes("POWRÓT Z QC") || txt.includes("RE-REPAIR") || txt.includes("ZAKWESTIONOWANE")) && !row.dataset.mitelScanned) {
-                row.dataset.mitelScanned = "true";
-                daneDzis.powroty++;
+    let flagaZmiany = false;
+    // Skanujemy wszystkie wiersze w tabeli głównej
+    document.querySelectorAll('#general tr').forEach(row => {
+        // Znajdujemy pole select statusu w danym wierszu
+        let selectStatus = row.querySelector('.status-select');
 
-                let m = wykryjModelTelefonu(row);
-                if (m === "Nieznany Model") return;
+        // Sprawdzamy, czy select istnieje, czy ma wartość "POWRÓT"
+        // i czy jeszcze nie oznaczyliśmy tego wiersza jako zeskanowany
+        if (selectStatus && selectStatus.value === 'POWRÓT' && !row.dataset.mitelScanned) {
+            row.dataset.mitelScanned = "true";
 
-                if (!daneDzis.modele[m]) daneDzis.modele[m] = { ber: 0, powroty: 0, razem: 0 };
-                daneDzis.modele[m].powroty++;
+            // Zwiększamy licznik powrotów
+            daneDzis.powroty++;
 
-                let dedykowanySN = "Z rejestru";
-                const regexSN = /([0-9A-F]{12})|(RE[0-9]{10})/i;
-                let meczSN = row.innerText.match(regexSN);
-                if (meczSN) dedykowanySN = meczSN[0];
+            // Wykrywamy model za pomocą Twojej istniejącej funkcji
+            let m = wykryjModelTelefonu(row);
+            if (m === "Nieznany Model") return;
 
-                dodajWpisDoTimeline('QC', m, dedykowanySN);
-                flagaZmiany = true;
+            // Inicjalizacja struktury modelu, jeśli jeszcze nie istnieje
+            if (!daneDzis.modele[m]) {
+                daneDzis.modele[m] = { ber: 0, powroty: 0, razem: 0 };
             }
-        });
-        if (flagaZmiany) zapiszDaneDnia(KLUCZ_DNIA, daneDzis);
+            daneDzis.modele[m].powroty++;
+
+            // Wykrywanie SN (używając Twojej logiki regex)
+            let dedykowanySN = "Z rejestru";
+            const regexSN = /([0-9A-F]{12})|(RE[0-9]{10})/i;
+            let meczSN = row.innerText.match(regexSN);
+            if (meczSN) dedykowanySN = meczSN[0];
+
+            // Dodanie do historii
+            dodajWpisDoTimeline('QC', m, dedykowanySN);
+            flagaZmiany = true;
+        }
+    });
+
+    // Zapisz zmiany w localStorage, jeśli cokolwiek zostało dodane
+    if (flagaZmiany) zapiszDaneDnia(KLUCZ_DNIA, daneDzis);
     }
 
     function obliczDaneOkresu(dni, archiwum) {
@@ -387,6 +422,13 @@
         const hudContainer = document.getElementById('mitel-hud-container');
         if (!naglowek || !zawartosc || !hudContainer) return;
 
+        let modelePowrotyHTML = '';
+        for (let m in daneDzis.modele) {
+        if (daneDzis.modele[m].powroty > 0) {
+            modelePowrotyHTML += `<div style="font-size:9px; color:#818cf8; padding-left:10px;">• ${m}: ${daneDzis.modele[m].powroty}</div>`;
+         }
+        }
+
         odswiezStyleHUD();
 
         const otwarte = zawartosc.style.display !== 'none';
@@ -500,8 +542,21 @@
                 <div style="display:flex; justify-content:space-between; font-size:11px;"><span><strong style="color:#22c55e;">Czyste:</strong></span><strong style="color:#22c55e;">${czyste}</strong></div>
                 <div style="display:flex; justify-content:space-between; font-size:11px;"><span><strong style="color:#f87171;">Ber:</strong></span><strong style="color:#f87171;">${daneDzis.ber}</strong></div>
                 <div style="display:flex; justify-content:space-between; font-size:11px;"><span><strong style="color:#818cf8;">Zwroty:</strong></span><strong style="color:#818cf8;">${daneDzis.powroty}</strong></div>
-            `;
+           `;
         } else {
+
+            let modelePowrotyHTML = '';
+              if (daneDzis.modele) {
+                for (let m in daneDzis.modele) {
+             if (daneDzis.modele[m].powroty > 0) {
+                modelePowrotyHTML += `<div style="display:flex; justify-content:space-between; font-size:10px; color:#a5b4fc; padding:1px 0 1px 10px;">
+                <span>• ${m}</span>
+                <span>${daneDzis.modele[m].powroty}</span>
+                </div>`;
+               }
+             }
+            }
+
             zawartosc.innerHTML = `
                 <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>Zegar:</span><span id="hud-live-clock" style="color:#38bdf8; font-family:monospace;">${aktualnyCzasTekst}</span></div>
                 <div style="height:1px; background:rgba(128,128,128,0.2); margin:2px 0;"></div>
@@ -524,7 +579,7 @@
                     ${czyJestPrzerwa ? '☕ TRWA PRZERWA (Wznów)' : '⏱️ Idę na przerwę'}
                 </button>
                 ${typeof generujMiniWykresHTML === 'function' ? generujMiniWykresHTML() : ''}
-            `;
+             ${modelePowrotyHTML}`;
 
             const btnStats = document.getElementById('hud-open-stats-btn');
             if (btnStats) btnStats.addEventListener('click', (e) => { e.stopPropagation(); stworzPelnyEkranStats(); });
