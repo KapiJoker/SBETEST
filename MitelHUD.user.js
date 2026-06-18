@@ -113,50 +113,56 @@
     }
 
     function wykryjModelTelefonu(wyszukajWElementie = document.body) {
-        let selectModel = wyszukajWElementie.querySelector('select[name="model_id"]');
+    let selectModel = wyszukajWElementie.querySelector('select[name="model_id"]');
 
-        if (!selectModel && document.getElementById('myModal')) {
-            selectModel = document.getElementById('myModal').querySelector('select[name="model_id"]');
-        }
+    if (!selectModel && document.getElementById('myModal')) {
+        selectModel = document.getElementById('myModal').querySelector('select[name="model_id"]');
+    }
 
-        let naglowekTekst = "";
-        if (selectModel && selectModel.options[selectModel.selectedIndex]) {
-            naglowekTekst = selectModel.options[selectModel.selectedIndex].text.toUpperCase();
-        } else if (wyszukajWElementie) {
-            naglowekTekst = wyszukajWElementie.innerText.toUpperCase();
-        }
+    let naglowekTekst = "";
+    if (selectModel && selectModel.options[selectModel.selectedIndex]) {
+        naglowekTekst = selectModel.options[selectModel.selectedIndex].text.toUpperCase();
+    } else if (wyszukajWElementie) {
+        // TO JEST KLUCZOWA ZMIANA:
+        // Usuwamy wszystko, co nie jest literą, cyfrą lub spacją,
+        // żeby ikonki (np. ℹ️) nie psuły wykrywania modelu
+        naglowekTekst = wyszukajWElementie.innerText.replace(/[^\w\s]/gi, ' ').toUpperCase();
+    }
 
-        if (!naglowekTekst || naglowekTekst.includes("-- WYBIERZ --")) {
-            return "Nieznany Model";
-        }
-
-        const modele = [
-            "612D V2", "612DT", "612D",
-            "622D V2", "622DT", "622D",
-            "632DT", "632D V2", "632D",
-            "650C", "610D", "620D", "630D",
-            "5370", "5380", "5361 IP", "5361",
-            "6869I", "6867I", "6865I", "6863I",
-            "6869", "6867", "6865", "6863",
-            "6940I", "6930I", "6920I", "6930L",
-            "6940W", "6920W", "6940", "6930", "6920",
-            "RFP 35", "RFP 43", "RFP 44", "RFP 45", "RFP35", "RFP43", "RFP44", "RFP45",
-            "UNIFY S6", "142 EU", "142D", "112 DECT"
-        ];
-
-        for (let m of modele) {
-            const regex = new RegExp("\\b" + m.replace(" ", "\\s*") + "\\b", "i");
-            if (regex.test(naglowekTekst)) {
-                if (m.includes(" V2")) return "Mitel " + m.replace(" V2", " v2");
-                if (m.includes("DT")) return "Mitel " + m.replace("DT", "dt");
-                if (m.endsWith("I") && (m.startsWith("68") || m.startsWith("69"))) return "Mitel " + m.slice(0, -1) + "i";
-                return "Mitel " + m;
-            }
-        }
-
-        if (naglowekTekst.includes("UNIFY")) return "Urządzenie Unify";
+    if (!naglowekTekst || naglowekTekst.includes("-- WYBIERZ --")) {
         return "Nieznany Model";
     }
+
+    const modele = [
+        "612D V2", "612DT", "612D",
+        "622D V2", "622DT", "622D",
+        "632DT", "632D V2", "632D",
+        "650C", "610D", "620D", "630D",
+        "5370", "5380", "5361 IP", "5361",
+        "6869I", "6867I", "6865I", "6863I",
+        "6869", "6867", "6865", "6863",
+        "6940I", "6930I", "6920I", "6930L",
+        "6940W", "6920W", "6940", "6930", "6920",
+        "RFP 35", "RFP 43", "RFP 44", "RFP 45", "RFP35", "RFP43", "RFP44", "RFP45",
+        "UNIFY S6", "142 EU", "142D", "112 DECT"
+    ];
+
+    for (let m of modele) {
+        // Używamy bezpieczniejszego regexa bez \b
+        const regex = new RegExp(m.replace(" ", "\\s*"), "i");
+        if (regex.test(naglowekTekst)) {
+            if (m.includes(" V2")) return "Mitel " + m.replace(" V2", " v2");
+            if (m.includes("DT")) return "Mitel " + m.replace("DT", "dt");
+            if (m.endsWith("I") && (m.startsWith("68") || m.startsWith("69"))) return "Mitel " + m.slice(0, -1) + "i";
+            return "Mitel " + m;
+        }
+    }
+
+     console.log("DEBUG: Nie wykryto modelu w tekście:", naglowekTekst);
+
+    if (naglowekTekst.includes("UNIFY")) return "Urządzenie Unify";
+    return "Nieznany Model";
+}
 
     function pobierzKategorieDlaModelu(nazwaModelu) {
         let m = nazwaModelu.toUpperCase();
@@ -198,47 +204,45 @@
         daneDzis.listaNapraw.unshift({ czas: t, typ: typ, model: model, sn: sn });
     }
 
-    function skanujTabeleWPoszukiwaniuPowrotow() {
+function skanujTabeleWPoszukiwaniuPowrotow() {
+    console.log("--- START SKANOWANIA ---");
     let flagaZmiany = false;
 
-    document.querySelectorAll('#general tr').forEach(row => {
+    document.querySelectorAll('#general tr').forEach((row, index) => {
         let selectStatus = row.querySelector('.status-select');
-        if (!selectStatus || selectStatus.value !== 'POWRÓT') return;
 
-        let sn = row.innerText.match(/([0-9A-F]{12})|(RE[0-9]{10})/i);
-        let idWiersza = sn ? sn[0] : 'row_' + row.rowIndex;
+        if (selectStatus) {
+            let aktualnyStatus = selectStatus.value;
+            console.log("Wiersz " + index + " | Status: " + aktualnyStatus);
 
-        // Jeśli już mamy ten wpis w historii – pomijamy, żeby nie dublować
-        if (daneDzis.historia && daneDzis.historia.some(wpis => wpis.sn === idWiersza)) {
-            return;
-        }
+            // LOGIKA:
+            // 1. Jeśli status to POWRÓT i wiersz jeszcze nie był skanowany
+            if (aktualnyStatus === 'POWRÓT' && !row.dataset.mitelScanned) {
+                console.log("!!! ZNALEZIONO POWRÓT w wierszu " + index + " !!!");
 
-        // Sprawdzamy czy wiersz nie był już zeskanowany w bieżącej sesji
-        if (!row.dataset.mitelScanned) {
-            row.dataset.mitelScanned = "true";
+                let m = wykryjModelTelefonu(row);
+                if (m === "Nieznany Model") return;
 
-            let m = wykryjModelTelefonu(row);
-            if (m === "Nieznany Model") return;
+                if (!daneDzis.modele[m]) {
+                    daneDzis.modele[m] = { ber: 0, powroty: 0, razem: 0 };
+                }
+                daneDzis.modele[m].powroty++;
+                daneDzis.powroty++;
 
-            // Inicjalizacja jeśli nie istnieje
-            if (!daneDzis.modele[m]) {
-                daneDzis.modele[m] = { ber: 0, powroty: 0, razem: 0 };
+                row.dataset.mitelScanned = "true"; // Oznaczamy, że ten konkretny wiersz z POWROTEM już policzyliśmy
+                flagaZmiany = true;
             }
-
-            // Zwiększamy liczniki TYLKO RAZ
-            daneDzis.modele[m].powroty++;
-            daneDzis.powroty++;
-
-            // Dodanie do historii
-            dodajWpisDoTimeline('QC', m, idWiersza); // Używamy idWiersza zamiast "Z rejestru"
-
-            flagaZmiany = true;
+            // 2. JEŚLI STATUS JEST INNY NIŻ POWRÓT (np. Lutowanie, QC)
+            // Musimy wyczyścić flagę, żeby w razie powrotu do statusu POWRÓT, skrypt znów go zauważył
+            else if (aktualnyStatus !== 'POWRÓT') {
+                row.dataset.mitelScanned = "";
+            }
         }
     });
 
     if (flagaZmiany) {
         zapiszDaneDnia(KLUCZ_DNIA, daneDzis);
-        odswiezWidokHUD(); // Dodajemy odświeżenie tutaj, żeby HUD zareagował od razu
+        odswiezWidokHUD();
     }
 }
 
@@ -1758,6 +1762,24 @@
         rysuj();
     }
 
+    function aktywujObserwatorTabeli() {
+    const cel = document.querySelector('#general'); // Twoja tabela
+    if (!cel) return;
+
+    const observer = new MutationObserver((mutations) => {
+        // Jeśli cokolwiek w tabeli się zmieniło (np. wpadł nowy wiersz)
+        // wywołujemy skanowanie
+        skanujTabeleWPoszukiwaniuPowrotow();
+        console.log("Wykryto zmianę w tabeli, przeskanowano ponownie.");
+    });
+
+    observer.observe(cel, {
+        childList: true,     // obserwuj dodawanie/usuwanie wierszy
+        subtree: true,       // obserwuj zmiany wewnątrz wierszy
+        characterData: true  // obserwuj zmiany tekstu
+    });
+}
+
     // ==========================================
     // INITIALIZATION
     // ==========================================
@@ -1772,6 +1794,9 @@
 
             sprawdzZapisPrzedPrzeladowaniem();
             podepnijMonitorowanieStatusuLive();
+
+            aktywujObserwatorTabeli();
+
             skanujTabeleWPoszukiwaniuPowrotow();
 
             sprawdzMultiZapisyWTabeli();
@@ -1791,12 +1816,20 @@
 
     console.log("Skrypt dotarł do końca definicji funkcji.");
 
-    // Wystawienie funkcji do obiektu window
-    window.MITEL_DEBUG = {
-        skanuj: skanujTabeleWPoszukiwaniuPowrotow,
-        dane: () => daneDzis,
-        testModel: wykryjModelTelefonu,
-        odswiez: odswiezWidokHUD
-    };
+    // Wystawienie funkcji do obiektu window dla potrzeb debugowania
+    window.DEBUG_MITEL = {
+        testujModel: (selector) => {
+            let row = document.querySelector(selector);
+            if (!row) return "Nie znaleziono wiersza!";
+            let wynik = wykryjModelTelefonu(row);
+            console.log("Tekst wiersza:", row.innerText.replace(/[^\w\s]/gi, ' '));
+            console.log("Wynik detekcji modelu:", wynik);
+            return wynik;
+        },
+        skanuj: () => {
+            skanujTabeleWPoszukiwaniuPowrotow();
+            return "Skanowanie wykonane.";
+        }
+    };odswiez: odswiezWidokHUD
     console.log("Obiekt MITEL_DEBUG został utworzony:", window.MITEL_DEBUG);
 })();
