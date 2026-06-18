@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mitel Intelligence System HUD
 // @namespace    http://tampermonkey.net/
-// @version      24.10
+// @version      24.11
 // @description  Zaawansowany system HUD z kompaktowym kalendarzem oraz możliwością zmiany strony ekranu (Lewo/Prawo)
 // @author       Gemini Player
 // @match        *https://intranet.sbe-online.pl/dt/mitel/index.php**
@@ -1498,14 +1498,12 @@ function skanujTabeleWPoszukiwaniuPowrotow() {
                             daneDzis.streak = 0;
                             dodajWpisDoTimeline('BER', zapamietanyModel, zapamietanySN);
                         }
-
                     } else if (sessionStorage.getItem('qc_pending_increment') === '1') {
-
+                        // LOGIKA QC
                         if (czyZgloszonoJakoPowrot) {
                             daneDzis.qc = (daneDzis.qc || 0) + 1;
                             daneDzis.modele[zapamietanyModel].qc = (daneDzis.modele[zapamietanyModel].qc || 0) + 1;
                             daneDzis.modele[zapamietanyModel].powroty = (daneDzis.modele[zapamietanyModel].powroty || 0) + 1;
-
                             daneDzis.streak = (daneDzis.streak || 0) + 1;
                             dodajWpisDoTimeline('QC', zapamietanyModel, zapamietanySN);
                         } else {
@@ -1517,8 +1515,16 @@ function skanujTabeleWPoszukiwaniuPowrotow() {
                         if (czySumaWzrosla) {
                             daneDzis.modele[zapamietanyModel].razem++;
                         }
+                    } else if (sessionStorage.getItem('lutowanie_pending_increment') === '1') {
+                        // LOGIKA LUTOWANIA
+                        daneDzis.lutowanie = (daneDzis.lutowanie || 0) + 1;
+                        dodajWpisDoTimeline('LUTOWANIE', zapamietanyModel, zapamietanySN);
 
+                        if (czySumaWzrosla) {
+                            daneDzis.modele[zapamietanyModel].razem++;
+                        }
                     } else {
+                        // LOGIKA DLA CZYSTE (DOMYŚLNA)
                         if (czySumaWzrosla) {
                             daneDzis.modele[zapamietanyModel].razem++;
                             daneDzis.modele[zapamietanyModel].czyste = (daneDzis.modele[zapamietanyModel].czyste || 0) + 1;
@@ -1540,6 +1546,7 @@ function skanujTabeleWPoszukiwaniuPowrotow() {
             sessionStorage.removeItem('qc_pending_increment');
             sessionStorage.removeItem('mitel_pending_model');
             sessionStorage.removeItem('mitel_pending_sn');
+            sessionStorage.removeItem('lutowanie_pending_increment');
             sessionStorage.removeItem('mitel_pending_token');
             sessionStorage.removeItem('mitel_pending_is_return');
             sessionStorage.removeItem(kluczBlokadyLive);
